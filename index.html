@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task ME — งาน · ไทม์ไลน์ · ค่าใช้จ่ายของครอบครัว</title>
+<meta name="description" content="Task ME — จัดการงาน ปฏิทิน ไทม์ไลน์หลักฐาน และค่าใช้จ่าย แชร์กับครอบครัว">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F5F1E8">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TaskME">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F5F1E8;            /* cream paper */
+  --bg2:#EFE9DC;
+  --panel:#FFFDF9;         /* warm white */
+  --ink:#3B3830;
+  --muted:#928B7B;
+  --line:#EAE3D6;
+  --clay:#D97757;          /* Claude coral */
+  --clay-d:#C4653F;
+  --clay-soft:#FBEDE6;
+  /* pastels */
+  --coral:#E8A08D; --sage:#9EBE9F; --sky:#98BBD4; --lav:#B9A9D6; --butter:#E3C57F; --rose:#DFA3B6;
+  --shadow:0 1px 2px rgba(80,60,40,.04),0 10px 26px rgba(120,90,60,.07);
+  --radius:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,"Segoe UI","Sarabun","Noto Sans Thai",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+
+/* header */
+.hdr{position:sticky;top:0;z-index:20;background:rgba(245,241,232,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.hdr-in{max-width:1080px;margin:0 auto;padding:14px 26px;display:flex;align-items:center;gap:18px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo .mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#E8956F,#D97757);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 10px rgba(217,119,87,.3);}
+.logo .name{font-weight:800;font-size:17px;}
+.logo .name span{color:var(--clay);}
+/* workspace segmented */
+.seg{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:4px;gap:3px;}
+.seg button{padding:7px 16px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted);display:flex;align-items:center;gap:7px;transition:.15s;}
+.seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(80,60,40,.1);}
+.spacer{flex:1;}
+.uav{width:34px;height:34px;border-radius:50%;background:var(--clay);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer;}
+.gear{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:16px;transition:.15s;}
+.gear:hover{background:var(--clay-soft);border-color:var(--clay);}
+.gear.on{background:var(--clay);border-color:var(--clay);}
+
+/* subtabs */
+.subbar{max-width:1080px;margin:0 auto;padding:0 26px;display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--line);}
+.subtab{padding:14px 16px;font-weight:700;font-size:14.5px;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:8px;transition:.15s;}
+.subtab:hover{color:var(--ink);}
+.subtab.on{color:var(--clay);border-color:var(--clay);}
+.subbar .members{margin-left:auto;display:flex;align-items:center;gap:10px;padding:8px 0;}
+.avstack{display:flex;}
+.avstack .mini-av{margin-left:-7px;border:2px solid var(--bg);}
+.avstack .mini-av:first-child{margin-left:0;}
+
+/* main */
+.wrap{max-width:1080px;margin:0 auto;padding:24px 26px 70px;}
+.pagehead{display:flex;align-items:flex-end;gap:14px;margin-bottom:20px;}
+.pagehead h1{font-size:22px;font-weight:800;}
+.pagehead .sub{color:var(--muted);font-size:13.5px;margin-top:3px;}
+
+.btn{background:var(--clay);color:#fff;font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);transition:.15s;}
+.btn:hover{background:var(--clay-d);transform:translateY(-1px);}
+.btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:none;}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:10px;}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
+.panel h3{font-size:15px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.panel h3 .more{margin-left:auto;font-size:12.5px;color:var(--clay);font-weight:700;cursor:pointer;}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;}
+.mini-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:10px;flex:none;}
+.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex:none;}
+
+/* tasks */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.chip{font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);}
+.chip.on{background:var(--clay);color:#fff;border-color:var(--clay);}
+.task{display:flex;align-items:center;gap:12px;padding:12px 8px;border-radius:12px;transition:.12s;}
+.task:hover{background:var(--clay-soft);}
+.task + .task{border-top:1px solid var(--line);}
+.check{width:21px;height:21px;border-radius:7px;border:2px solid #D9D2C4;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;transition:.15s;}
+.task.done .check{background:var(--sage);border-color:var(--sage);}
+.task.done .t-title{text-decoration:line-through;color:var(--muted);}
+.t-body{flex:1;min-width:0;}
+.t-title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.t-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
+.tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;}
+.pri{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;}
+.pri.high{background:#F7DED5;color:#B4522F;}
+.pri.mid{background:#F5EAD0;color:#9A7B2E;}
+.pri.low{background:#E4EEE4;color:#4F7A52;}
+.mail-badge{font-size:11px;color:var(--sky);font-weight:700;}
+.due{font-size:12px;color:var(--muted);font-weight:600;}
+.addrow{display:flex;gap:10px;margin-bottom:14px;}
+.addrow input,.field,select.field{flex:1;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;background:var(--panel);color:var(--ink);outline:none;}
+.field:focus,.addrow input:focus{border-color:var(--clay);box-shadow:0 0 0 3px var(--clay-soft);}
+
+/* stat cards */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:6px;}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.stat .blob{position:absolute;right:-14px;top:-14px;width:56px;height:56px;border-radius:50%;opacity:.5;}
+.stat .k{font-size:12.5px;color:var(--muted);font-weight:700;}
+.stat .v{font-size:28px;font-weight:800;margin-top:6px;}
+.stat .v small{font-size:13px;color:var(--muted);font-weight:600;}
+
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.kcol{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);}
+.kcol h4{font-size:13px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.kcol h4 .cnt{margin-left:auto;color:var(--muted);}
+.kcard{background:#FCFAF4;border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:10px;}
+.kcard .kt{font-weight:600;font-size:13.5px;margin-bottom:9px;}
+.kcard .kf{display:flex;align-items:center;gap:8px;}
+.kmove{margin-left:auto;display:flex;gap:4px;}
+.kmove button{width:25px;height:25px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:800;}
+.kmove button:hover{background:var(--clay-soft);color:var(--clay);}
+
+/* calendar */
+.cal{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:#FBF7EF;border-bottom:1px solid var(--line);}
+.cal-head div{padding:10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cell{min-height:98px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;}
+.cell .dn{font-size:12.5px;font-weight:700;color:var(--muted);}
+.cell.today .dn{background:var(--clay);color:#fff;border-radius:8px;padding:1px 7px;}
+.cell.dim{background:#FBF9F3;}
+.ev{font-size:11px;font-weight:700;color:#5a4a3a;border-radius:7px;padding:2px 7px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* timeline / cases */
+.banner{background:linear-gradient(120deg,#FBEDE6,#F7F0E2);border:1px solid #F0DFD2;border-radius:14px;padding:13px 16px;font-size:13px;color:#9a5b3f;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.case{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);cursor:pointer;transition:.15s;margin-bottom:14px;}
+.case:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(120,90,60,.1);}
+.case-top{display:flex;align-items:center;gap:12px;}
+.case .cemoji{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;}
+.case .cname{font-weight:800;font-size:16px;}
+.case .cmeta{font-size:12.5px;color:var(--muted);margin-top:2px;}
+.status{font-size:11.5px;font-weight:800;padding:4px 11px;border-radius:999px;}
+.status.open{background:#F7DED5;color:#B4522F;}
+.status.prog{background:#F5EAD0;color:#9A7B2E;}
+.status.closed{background:#E4EEE4;color:#4F7A52;}
+.case-foot{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--muted);font-size:12.5px;font-weight:600;}
+
+.tl{position:relative;padding-left:26px;margin-top:6px;}
+.tl:before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--line);}
+.tl-item{position:relative;padding:0 0 20px 8px;}
+.tl-item:before{content:"";position:absolute;left:-22px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--clay);}
+.tl-item.pastel-sage:before{border-color:var(--sage);}
+.tl-item.pastel-sky:before{border-color:var(--sky);}
+.tl-date{font-size:12px;color:var(--clay);font-weight:800;}
+.tl-what{font-size:14px;margin-top:3px;line-height:1.5;}
+.tl-ev{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);background:#F5F1E8;border:1px solid var(--line);padding:2px 8px;border-radius:999px;margin-top:7px;}
+
+/* members */
+.member{display:flex;align-items:center;gap:12px;padding:13px 6px;}
+.member + .member{border-top:1px solid var(--line);}
+.member .mname{font-weight:700;font-size:14px;}
+.member .mrole{font-size:12px;color:var(--muted);}
+.perm{margin-left:auto;font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;}
+.perm.owner{background:var(--clay-soft);color:var(--clay);}
+.perm.edit{background:#E4EEE4;color:#4F7A52;}
+.perm.view{background:#EFEAF7;color:#6E5AA0;}
+.sharelink{display:flex;gap:10px;align-items:center;background:#FBF7EF;border:1px dashed var(--line);border-radius:12px;padding:11px 14px;font-size:13px;color:var(--muted);margin-top:14px;}
+.sharelink code{color:var(--ink);font-weight:700;}
+.conn-card{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:13px;margin-bottom:12px;}
+.conn-card .ci{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;background:#FBF7EF;}
+.conn-card .ct{font-weight:700;font-size:14px;}
+.conn-card .cs{font-size:12.5px;color:var(--muted);}
+.pill-ok{margin-left:auto;font-size:12px;font-weight:800;color:#4F7A52;background:#E4EEE4;padding:5px 11px;border-radius:999px;}
+.section-title{font-size:12.5px;font-weight:800;color:var(--muted);letter-spacing:.05em;margin:24px 0 12px;text-transform:uppercase;}
+
+/* expenses */
+.exp-total{background:linear-gradient(135deg,#FBEDE6,#F7F0E2);border:1px solid #F0DFD2;border-radius:16px;padding:20px 22px;margin-bottom:18px;}
+.exp-total .lbl{font-size:12.5px;font-weight:700;color:#9a5b3f;}
+.exp-total .amt{font-size:34px;font-weight:800;color:#9a5b3f;margin-top:4px;}
+.exp-total .amt small{font-size:15px;font-weight:700;}
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.bar-row .bl{width:130px;font-size:13px;font-weight:700;flex:none;display:flex;align-items:center;gap:6px;}
+.bar-track{flex:1;height:12px;border-radius:999px;background:var(--bg2);overflow:hidden;}
+.bar-fill{height:100%;border-radius:999px;}
+.bar-row .bv{width:92px;text-align:right;font-size:12.5px;font-weight:700;color:var(--muted);flex:none;}
+.exp{display:flex;align-items:center;gap:12px;padding:13px 8px;}
+.exp + .exp{border-top:1px solid var(--line);}
+.exp .et{font-weight:600;font-size:14px;}
+.exp .em{font-size:12px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.exp .ea{margin-left:auto;font-weight:800;font-size:15px;flex:none;}
+.exp .del{width:28px;height:28px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:14px;flex:none;}
+.exp .del:hover{background:#F7DED5;color:#B4522F;border-color:#F0C4B4;}
+/* settings */
+.prow{display:flex;align-items:center;gap:12px;padding:13px 6px;}
+.prow + .prow{border-top:1px solid var(--line);}
+.prow .pe{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex:none;}
+.prow .pn{font-weight:700;font-size:14px;}
+.prow .del{margin-left:auto;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:15px;flex:none;}
+.prow .del:hover{background:#F7DED5;color:#B4522F;border-color:#F0C4B4;}
+.swatches{display:flex;gap:8px;margin-top:6px;}
+.sw{width:30px;height:30px;border-radius:9px;cursor:pointer;border:3px solid transparent;}
+.sw.on{border-color:var(--ink);}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(60,45,30,.32);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
+.modal{background:var(--panel);border-radius:20px;width:100%;max-width:450px;padding:24px;box-shadow:0 30px 80px rgba(60,45,30,.3);}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:14px;}
+.modal label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:12px 0 6px;}
+.modal .row{display:flex;gap:10px;}
+.checkline{display:flex;align-items:center;gap:9px;margin-top:16px;font-size:13.5px;font-weight:600;background:#FBF7EF;border:1px solid var(--line);padding:11px 13px;border-radius:12px;}
+.checkline input{width:18px;height:18px;accent-color:var(--clay);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+
+.hide{display:none!important;}
+@media(max-width:820px){
+  .grid2,.kanban{grid-template-columns:1fr;}
+  .cards{grid-template-columns:repeat(2,1fr);}
+  .hdr-in,.subbar,.wrap{padding-left:16px;padding-right:16px;}
+  .subbar .members .avstack{display:none;}
+}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="logo"><div class="mark">TM</div><div class="name">Task<span>ME</span></div></div>
+    <div class="seg" id="wsSeg">
+      <button data-ws="personal" class="on">👤 ส่วนตัว</button>
+      <button data-ws="shared">👨‍👩‍👧 แชร์</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="gear" id="gearBtn" onclick="go(null,'settings')" title="ตั้งค่า">⚙️</button>
+    <div class="uav" id="uav" onclick="go(null,'settings')" title="โปรไฟล์">ม</div>
+  </div>
+  <div class="subbar" id="subbar"></div>
+</header>
+<main class="wrap" id="main"></main>
+<div id="modalRoot"></div>
+
+<script>
+/* ---------------- pastel palette for projects ---------------- */
+const PAL={coral:'#E8A08D',sage:'#9EBE9F',sky:'#98BBD4',lav:'#B9A9D6',butter:'#E3C57F',rose:'#DFA3B6'};
+const tint=(hex)=>hex+'33';
+
+/* ---------------- members ---------------- */
+const members=[
+  {id:'me',  name:'มาร์ท',        role:'เจ้าของ',      color:'#D97757', av:'ม', perm:'owner'},
+  {id:'ploy',name:'พลอย (ภรรยา)', role:'แก้ไขได้',     color:PAL.rose,  av:'พ', perm:'edit'},
+  {id:'dad', name:'คุณพ่อ',        role:'แก้ไขได้',     color:PAL.sage,  av:'พ่', perm:'edit'},
+  {id:'kao', name:'น้องข้าว',      role:'ดูอย่างเดียว', color:PAL.butter,av:'ข', perm:'view'},
+];
+const mem=id=>members.find(m=>m.id===id);
+
+/* ---------------- data per workspace ---------------- */
+const DATA={
+  personal:{
+    label:'พื้นที่ส่วนตัว', sub:'งานและบันทึกของมาร์ทคนเดียว',
+    projects:[
+      {id:'w',name:'งาน/ที่ปรึกษา',emoji:'💼',color:PAL.sky},
+      {id:'h',name:'สุขภาพ',       emoji:'🩺',color:PAL.sage},
+      {id:'l',name:'เรียนรู้',     emoji:'📚',color:PAL.lav},
+    ],
+    tasks:[
+      {id:11,title:'เขียนสรุปข้อเสนอลูกค้า A',project:'w',due:'วันนี้',pri:'high',status:'doing',email:true},
+      {id:12,title:'ตรวจสุขภาพประจำปี — จองคิว',project:'h',due:'ศุกร์นี้',pri:'mid',status:'todo',email:false},
+      {id:13,title:'อ่านหนังสือ 30 นาที',project:'l',due:'ทุกวัน',pri:'low',status:'todo',email:false},
+      {id:14,title:'ทำสไลด์ workshop',project:'w',due:'จันทร์',pri:'mid',status:'done',email:false},
+    ],
+    events:[
+      {day:23,title:'ประชุมลูกค้า A',color:PAL.sky},
+      {day:25,title:'หาหมอฟัน',color:PAL.sage},
+      {day:28,title:'ส่งข้อเสนอ',color:PAL.sky},
+    ],
+    cases:[
+      {id:'c-health',emoji:'🩺',color:PAL.sage,name:'อาการปวดหลังเรื้อรัง',status:'prog',
+        entries:[
+          {date:'5 ก.ค. 2026',what:'เริ่มปวดหลังล่างหลังยกของหนัก',ev:'📷 รูปท่าทาง'},
+          {date:'9 ก.ค. 2026',what:'พบแพทย์ — วินิจฉัยกล้ามเนื้ออักเสบ ให้ยา',ev:'📄 ใบรับรองแพทย์'},
+          {date:'16 ก.ค. 2026',what:'อาการดีขึ้น เริ่มกายภาพเบา ๆ',ev:''},
+        ]},
+    ],
+    expenses:[
+      {id:41,title:'ซื้อหนังสือ + คอร์สออนไลน์',project:'l',amount:1290,date:'6 ก.ค.'},
+      {id:42,title:'ค่าเดินทางไปพบลูกค้า',project:'w',amount:450,date:'12 ก.ค.'},
+      {id:43,title:'ยาและวิตามิน',project:'h',amount:680,date:'18 ก.ค.'},
+    ],
+  },
+  shared:{
+    label:'พื้นที่ครอบครัว', sub:'แชร์กับทุกคนในบ้าน · ล็อกอินด้วย Google',
+    projects:[
+      {id:'p1',name:'รีโนเวทครัว',   emoji:'🏠',color:PAL.coral},
+      {id:'p2',name:'ทริปญี่ปุ่น',   emoji:'✈️',color:PAL.rose},
+      {id:'p3',name:'งานบ้าน',       emoji:'🧺',color:PAL.sage},
+      {id:'p4',name:'การเงินบ้าน',   emoji:'💰',color:PAL.butter},
+    ],
+    tasks:[
+      {id:21,title:'ขอใบเสนอราคาช่างครัว 3 เจ้า',project:'p1',assignee:'me',  due:'วันนี้',  pri:'high',status:'doing',email:true},
+      {id:22,title:'จองตั๋วเครื่องบิน BKK–NRT',   project:'p2',assignee:'ploy',due:'พรุ่งนี้',pri:'high',status:'todo', email:false},
+      {id:23,title:'ซักผ้า + เก็บห้องนั่งเล่น',    project:'p3',assignee:'kao', due:'วันนี้',  pri:'low', status:'todo', email:false},
+      {id:24,title:'สรุปค่าใช้จ่ายเดือน ก.ค.',      project:'p4',assignee:'me',  due:'ศุกร์นี้',pri:'mid', status:'todo', email:true},
+      {id:25,title:'รดน้ำต้นไม้หน้าบ้าน',           project:'p3',assignee:'dad', due:'วันนี้',  pri:'low', status:'done', email:false},
+    ],
+    events:[
+      {day:23,title:'ช่างเข้าวัดครัว',color:PAL.coral},
+      {day:24,title:'ประชุมครอบครัว',color:PAL.sage},
+      {day:26,title:'ช่างโซลาร์เข้าซ่อม',color:PAL.butter},
+      {day:30,title:'เดดไลน์เลือกกระเบื้อง',color:PAL.coral},
+    ],
+    cases:[
+      {id:'c-solar',emoji:'☀️',color:PAL.butter,name:'ระบบ Solar Cell มีปัญหา',status:'open',
+        entries:[
+          {date:'1 ก.ค. 2026', what:'พบว่า Solar cell trip — ไฟบางส่วนในบ้านดับ รีเซ็ตแล้วกลับมาปกติ',ev:'📷 รูปตู้ควบคุม'},
+          {date:'2 ก.ค. 2026', what:'โทรแจ้งช่างผู้ติดตั้ง นัดเข้าตรวจวันที่ 5 ก.ค.',ev:'📞 บันทึกการโทร'},
+          {date:'5 ก.ค. 2026', what:'ช่างเข้าตรวจ พบ inverter ทำงานร้อนผิดปกติ ยังไม่เจอสาเหตุชัด',ev:'📄 ใบตรวจงาน'},
+          {date:'8 ก.ค. 2026', what:'ไฟทริปครั้งที่ 2 ช่วงบ่ายแดดจัด — เก็บภาพจอ error ไว้เป็นหลักฐาน',ev:'📷 รูป error code'},
+          {date:'10 ก.ค. 2026',what:'ส่งเรื่อง + รูปทั้งหมดให้บริษัทเคลมประกันการติดตั้ง',ev:'📧 อีเมลเคลม'},
+        ]},
+      {id:'c-water',emoji:'🚿',color:PAL.sky,name:'ปั๊มน้ำเสียงดัง',status:'closed',
+        entries:[
+          {date:'20 มิ.ย. 2026',what:'ปั๊มน้ำมีเสียงดังผิดปกติตอนกลางคืน',ev:''},
+          {date:'23 มิ.ย. 2026',what:'ช่างเปลี่ยนลูกปืน ปั๊มเงียบปกติแล้ว',ev:'📄 ใบเสร็จ 850 บ.'},
+        ]},
+    ],
+    expenses:[
+      {id:51,title:'มัดจำช่างครัว (งวดแรก)',project:'p1',amount:20000,date:'8 ก.ค.',payer:'me'},
+      {id:52,title:'ตั๋วเครื่องบิน BKK–NRT ×2',project:'p2',amount:18500,date:'14 ก.ค.',payer:'ploy'},
+      {id:53,title:'ของใช้ในบ้าน + ทำความสะอาด',project:'p3',amount:1250,date:'16 ก.ค.',payer:'dad'},
+      {id:54,title:'ค่าน้ำค่าไฟเดือน ก.ค.',project:'p4',amount:2380,date:'20 ก.ค.',payer:'me'},
+    ],
+  },
+};
+
+/* ---------------- state ---------------- */
+let ws='personal', tab='task', caseOpen=null;
+const D=()=>DATA[ws];
+const proj=id=>D().projects.find(p=>p.id===id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s);
+function avatar(id,cls='mini-av'){const m=mem(id);return `<span class="${cls}" style="background:${m.color}" title="${esc(m.name)}">${esc(m.av)}</span>`;}
+function ptag(pid){const p=proj(pid);if(!p)return '';return `<span class="tag" style="background:${tint(p.color)};color:#6a5540">${p.emoji} ${esc(p.name)}</span>`;}
+const priLabel={high:'ด่วน',mid:'ปานกลาง',low:'ทั่วไป'};
+const statusLabel={open:'ยังไม่จบ',prog:'กำลังแก้',closed:'ปิดเคสแล้ว'};
+const baht=n=>Number(n).toLocaleString('en-US');
+
+/* ---------------- chrome (subtabs) ---------------- */
+function renderChrome(){
+  document.querySelectorAll('#wsSeg button').forEach(b=>b.classList.toggle('on',b.dataset.ws===ws));
+  const tabs=[['task','✅ Task'],['calendar','📅 Calendar'],['timeline','🕑 Timeline'],['expenses','💰 ค่าใช้จ่าย']];
+  let membersHtml='';
+  if(ws==='shared'){
+    membersHtml=`<div class="members"><div class="avstack">${members.map(m=>avatar(m.id)).join('')}</div>
+      <button class="btn sm" onclick="go(null,'share')">＋ เชิญ / แชร์</button></div>`;
+  }
+  $('#subbar').innerHTML=tabs.map(([t,l])=>`<button class="subtab ${tab===t?'on':''}" onclick="go('${t}')">${l}</button>`).join('')+membersHtml;
+  const me=mem('me');$('#uav').textContent=me.av;$('#uav').style.background=me.color;
+  $('#gearBtn').classList.toggle('on',tab==='settings');
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  renderChrome();
+  const m=$('#main');
+  if(tab==='share'){m.innerHTML=viewShare();return;}
+  if(tab==='settings'){m.innerHTML=viewSettings();return;}
+  if(tab==='task') m.innerHTML=viewTasks();
+  else if(tab==='calendar') m.innerHTML=viewCalendar();
+  else if(tab==='timeline') m.innerHTML= caseOpen? viewCaseDetail(caseOpen): viewTimeline();
+  else if(tab==='expenses') m.innerHTML=viewExpenses();
+}
+function pagehead(title,sub,actions=''){return `<div class="pagehead"><div><h1>${title}</h1><div class="sub">${sub}</div></div><div style="flex:1"></div>${actions}</div>`;}
+
+/* ---- Tasks ---- */
+let taskFilter='all';
+function taskRow(t){
+  const done=t.status==='done';
+  return `<div class="task ${done?'done':''}">
+    <button class="check" onclick="toggleTask(${t.id})">${done?'✓':''}</button>
+    <div class="t-body"><div class="t-title">${esc(t.title)} ${t.email?'<span class="mail-badge">📧 จากอีเมล</span>':''}</div>
+      <div class="t-meta">${ptag(t.project)}<span class="pri ${t.pri}">${priLabel[t.pri]}</span><span class="due">📅 ${esc(t.due)}</span></div></div>
+    ${t.assignee?avatar(t.assignee):''}
+  </div>`;
+}
+function viewTasks(){
+  const d=D();let list=d.tasks.slice();
+  if(taskFilter==='today')list=list.filter(t=>t.due==='วันนี้');
+  else if(taskFilter!=='all')list=list.filter(t=>t.project===taskFilter);
+  const chip=(v,l)=>`<button class="chip ${taskFilter===v?'on':''}" onclick="setFilter('${v}')">${l}</button>`;
+  const doing=d.tasks.filter(t=>t.status==='doing').length, done=d.tasks.filter(t=>t.status==='done').length;
+  return pagehead('Task · '+d.label,'จัดการงานและติดตามสถานะ','<button class="btn" onclick="openTaskModal()">＋ เพิ่มงาน</button>')
+    +`<div class="cards" style="margin-bottom:18px">
+        <div class="stat"><div class="blob" style="background:${PAL.coral}"></div><div class="k">งานทั้งหมด</div><div class="v">${d.tasks.length}</div></div>
+        <div class="stat"><div class="blob" style="background:${PAL.sky}"></div><div class="k">กำลังทำ</div><div class="v">${doing}</div></div>
+        <div class="stat"><div class="blob" style="background:${PAL.sage}"></div><div class="k">เสร็จแล้ว</div><div class="v">${done}</div></div>
+        <div class="stat"><div class="blob" style="background:${PAL.butter}"></div><div class="k">โปรเจกต์</div><div class="v">${d.projects.length}</div></div>
+      </div>`
+    +`<div class="chips">${chip('all','ทั้งหมด')}${chip('today','วันนี้')}${d.projects.map(p=>chip(p.id,p.emoji+' '+p.name)).join('')}</div>`
+    +`<div class="panel">${list.length?list.map(taskRow).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">ไม่มีงานในหมวดนี้ 🎉</div>'}</div>`;
+}
+function setFilter(v){taskFilter=v;render();}
+function toggleTask(id){const t=D().tasks.find(x=>x.id===id);t.status=t.status==='done'?'todo':'done';render();}
+
+/* ---- Calendar ---- */
+function viewCalendar(){
+  const d=D();const dow=['อา','จ','อ','พ','พฤ','ศ','ส'];const firstDow=3,days=31;
+  let cells='';for(let i=0;i<firstDow;i++)cells+=`<div class="cell dim"></div>`;
+  for(let day=1;day<=days;day++){
+    const evs=d.events.filter(e=>e.day===day);
+    cells+=`<div class="cell ${day===23?'today':''}"><div class="dn">${day}</div>${evs.map(e=>`<div class="ev" style="background:${tint(e.color)}">${esc(e.title)}</div>`).join('')}</div>`;
+  }
+  return pagehead('Calendar · '+d.label,'ซิงก์สองทางกับ Google Calendar','<button class="btn" onclick="openEventModal()">＋ สร้างนัด</button>')
+    +`<div class="banner">🔄 นัดที่สร้างในนี้จะถูกส่งขึ้น Google Calendar อัตโนมัติ (สองทาง)</div>`
+    +`<div class="cal"><div class="cal-head">${dow.map(x=>`<div>${x}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
+}
+function openEventModal(){
+  const opts=D().projects.map(p=>`<option value="${p.id}">${p.emoji} ${esc(p.name)}</option>`).join('');
+  $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h3>＋ สร้างนัดในปฏิทิน</h3>
+    <label>ชื่อนัด</label><input class="field" id="evTitle" placeholder="เช่น พาน้องข้าวหาหมอฟัน">
+    <div class="row"><div style="flex:1"><label>วันที่ (ก.ค.)</label><input class="field" id="evDay" type="number" min="1" max="31" placeholder="27"></div>
+    <div style="flex:1"><label>หมวด</label><select class="field" id="evProj">${opts}</select></div></div>
+    <div class="checkline"><input type="checkbox" checked disabled> 🔄 ส่งขึ้น Google Calendar อัตโนมัติ</div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveEvent()">สร้างนัด</button></div>
+  </div></div>`;
+}
+function saveEvent(){const t=$('#evTitle').value.trim();const day=parseInt($('#evDay').value,10);if(!t||!day)return;D().events.push({day,title:t,color:proj($('#evProj').value).color});closeModal();render();}
+
+/* ---- Timeline (cases) ---- */
+function viewTimeline(){
+  const d=D();
+  return pagehead('Timeline · '+d.label,'บันทึกเหตุการณ์เป็น “เคส” เรียงตามวัน เก็บเป็นหลักฐาน','<button class="btn" onclick="openCaseModal()">＋ เปิดเคสใหม่</button>')
+    +`<div class="banner">🗂️ ฟีเจอร์เด่น: รวบรวมเหตุการณ์ทีละวันของเรื่องเดียว (เช่น ปัญหา Solar Cell) ให้เป็นไทม์ไลน์หลักฐานที่ย้อนดูได้</div>`
+    +d.cases.map(c=>{
+      const last=c.entries[c.entries.length-1];
+      return `<div class="case" onclick="openCase('${c.id}')">
+        <div class="case-top"><div class="cemoji" style="background:${tint(c.color)}">${c.emoji}</div>
+          <div style="flex:1"><div class="cname">${esc(c.name)}</div><div class="cmeta">${c.entries.length} เหตุการณ์ · ล่าสุด ${esc(last.date)}</div></div>
+          <span class="status ${c.status}">${statusLabel[c.status]}</span></div>
+        <div class="case-foot">🕑 ${esc(c.entries[0].date)} → ${esc(last.date)} · แตะเพื่อดูไทม์ไลน์ทั้งหมด →</div>
+      </div>`;
+    }).join('');
+}
+function openCase(id){caseOpen=id;render();window.scrollTo(0,0);}
+function viewCaseDetail(id){
+  const c=D().cases.find(x=>x.id===id);
+  const styles=['','pastel-sage','pastel-sky'];
+  return `<div class="pagehead"><button class="btn ghost sm" onclick="closeCase()">← กลับ</button>
+      <div style="margin-left:6px"><h1>${c.emoji} ${esc(c.name)}</h1><div class="sub">${c.entries.length} เหตุการณ์ · สถานะ: ${statusLabel[c.status]}</div></div>
+      <div style="flex:1"></div><span class="status ${c.status}" style="align-self:center">${statusLabel[c.status]}</span></div>`
+    +`<div class="panel">
+        <div class="addrow"><input id="ceDate" placeholder="วันที่ (เช่น 12 ก.ค. 2026)" style="max-width:190px"><input id="ceWhat" placeholder="เกิดอะไรขึ้น…"><button class="btn sm" onclick="addEntry('${id}')">＋ บันทึก</button></div>
+        <div class="tl">${c.entries.map((e,i)=>`<div class="tl-item ${styles[i%3]}">
+          <div class="tl-date">${esc(e.date)}</div>
+          <div class="tl-what">${esc(e.what)}</div>
+          ${e.ev?`<span class="tl-ev">${esc(e.ev)}</span>`:''}
+        </div>`).join('')}</div>
+      </div>`;
+}
+function closeCase(){caseOpen=null;render();}
+function addEntry(id){const c=D().cases.find(x=>x.id===id);const dt=$('#ceDate').value.trim();const w=$('#ceWhat').value.trim();if(!w)return;c.entries.push({date:dt||'วันนี้',what:w,ev:''});render();}
+function openCaseModal(){
+  $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h3>＋ เปิดเคสใหม่</h3>
+    <label>ชื่อเรื่อง / ปัญหา</label><input class="field" id="csName" placeholder="เช่น หลังคารั่วห้องนอน">
+    <label>เหตุการณ์แรก (วันนี้)</label><input class="field" id="csFirst" placeholder="พบว่า…">
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveCase()">เปิดเคส</button></div>
+  </div></div>`;
+}
+function saveCase(){const n=$('#csName').value.trim();if(!n)return;const first=$('#csFirst').value.trim();
+  D().cases.unshift({id:'c'+Date.now(),emoji:'📌',color:PAL.lav,name:n,status:'open',entries:[{date:'วันนี้',what:first||'เปิดเคส',ev:''}]});closeModal();render();}
+
+/* ---- Share ---- */
+function viewShare(){
+  return pagehead('สมาชิก & การแชร์','เชิญคนในครอบครัวมาใช้พื้นที่แชร์ร่วมกัน','<button class="btn ghost" onclick="go(\'task\')">← กลับพื้นที่แชร์</button>')
+    +`<div class="grid2">
+      <div class="panel"><h3>👨‍👩‍👧 สมาชิก (${members.length})</h3>
+        ${members.map(m=>`<div class="member">${avatar(m.id,'avatar')}<div><div class="mname">${esc(m.name)}</div><div class="mrole">${m.id==='me'?'nattawat…@gmail.com':'เข้าร่วมผ่านลิงก์'}</div></div>
+          <span class="perm ${m.perm}">${m.perm==='owner'?'เจ้าของ':m.perm==='edit'?'แก้ไขได้':'ดูอย่างเดียว'}</span></div>`).join('')}
+      </div>
+      <div class="panel"><h3>✉️ เชิญสมาชิกใหม่</h3>
+        <div class="addrow"><input placeholder="อีเมล Gmail ของสมาชิก"><button class="btn sm" onclick="alert('เดโม: ส่งคำเชิญทางอีเมลแล้ว')">เชิญ</button></div>
+        <div class="sharelink">🔗 <code>taskme.app/join/holista-family</code><button class="btn ghost sm" style="margin-left:auto" onclick="alert('คัดลอกลิงก์แล้ว')">คัดลอก</button></div>
+        <div class="section-title">การเชื่อมต่อ</div>
+        <div class="conn-card"><div class="ci">📅</div><div><div class="ct">Google Calendar</div><div class="cs">ซิงก์นัดหมายสองทาง</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
+        <div class="conn-card"><div class="ci">📧</div><div><div class="ct">Gmail</div><div class="cs">ติดดาวอีเมล → สร้างงาน</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
+      </div>
+    </div>`;
+}
+
+/* ---- Expenses ---- */
+function viewExpenses(){
+  const d=D();const list=d.expenses||[];
+  const total=list.reduce((s,e)=>s+e.amount,0);
+  // group by project
+  const byProj={};list.forEach(e=>{byProj[e.project]=(byProj[e.project]||0)+e.amount;});
+  const maxV=Math.max(1,...Object.values(byProj));
+  const bars=d.projects.filter(p=>byProj[p.id]).map(p=>{
+    const v=byProj[p.id];const pct=Math.round(v/maxV*100);
+    return `<div class="bar-row"><div class="bl">${p.emoji} ${esc(p.name)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${p.color}"></div></div>
+      <div class="bv">฿${baht(v)}</div></div>`;
+  }).join('') || '<div style="color:var(--muted);text-align:center;padding:12px">ยังไม่มีข้อมูล</div>';
+  const rows=list.length?list.slice().sort((a,b)=>b.id-a.id).map(expenseRow).join('')
+    :'<div style="color:var(--muted);text-align:center;padding:24px">ยังไม่มีรายการค่าใช้จ่าย</div>';
+  return pagehead('ค่าใช้จ่าย · '+d.label,'บันทึกและสรุปค่าใช้จ่ายแยกตามโปรเจกต์','<button class="btn" onclick="openExpenseModal()">＋ บันทึกค่าใช้จ่าย</button>')
+    +`<div class="exp-total"><div class="lbl">รวมค่าใช้จ่ายทั้งหมด</div><div class="amt">฿${baht(total)} <small>บาท</small></div></div>`
+    +`<div class="grid2">
+        <div class="panel"><h3>🧾 รายการล่าสุด (${list.length})</h3>${rows}</div>
+        <div class="panel"><h3>📊 แยกตามโปรเจกต์</h3>${bars}</div>
+      </div>`;
+}
+function expenseRow(e){
+  const p=proj(e.project);
+  const payer=e.payer?avatar(e.payer):'';
+  return `<div class="exp"><div style="flex:1;min-width:0">
+      <div class="et">${esc(e.title)}</div>
+      <div class="em">${p?ptag(e.project):''}<span>📅 ${esc(e.date)}</span>${e.payer?'<span>จ่ายโดย '+esc(mem(e.payer).name)+'</span>':''}</div>
+    </div>${payer}<div class="ea">฿${baht(e.amount)}</div>
+    <button class="del" onclick="deleteExpense(${e.id})" title="ลบ">✕</button></div>`;
+}
+function openExpenseModal(){
+  const d=D();
+  const opts=d.projects.map(p=>`<option value="${p.id}">${p.emoji} ${esc(p.name)}</option>`).join('');
+  const mopts=members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  const payerField= ws==='shared'?`<div style="flex:1"><label>ผู้จ่าย</label><select class="field" id="exPayer">${mopts}</select></div>`:'';
+  $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h3>＋ บันทึกค่าใช้จ่าย</h3>
+    <label>รายการ</label><input class="field" id="exTitle" placeholder="เช่น ค่ากระเบื้องห้องน้ำ">
+    <div class="row"><div style="flex:1"><label>จำนวนเงิน (บาท)</label><input class="field" id="exAmount" type="number" min="0" placeholder="1500"></div>
+    <div style="flex:1"><label>วันที่</label><input class="field" id="exDate" placeholder="เช่น 25 ก.ค."></div></div>
+    <div class="row"><div style="flex:1"><label>โปรเจกต์</label><select class="field" id="exProj">${opts}</select></div>${payerField}</div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveExpense()">บันทึก</button></div>
+  </div></div>`;
+}
+function saveExpense(){
+  const title=$('#exTitle').value.trim();const amt=parseFloat($('#exAmount').value);
+  if(!title||!(amt>0)){$('#exTitle').focus();return;}
+  const e={id:Date.now(),title,amount:amt,date:$('#exDate').value.trim()||'วันนี้',project:$('#exProj').value};
+  if(ws==='shared'&&$('#exPayer'))e.payer=$('#exPayer').value;
+  D().expenses.push(e);closeModal();render();
+}
+function deleteExpense(id){const d=D();d.expenses=d.expenses.filter(e=>e.id!==id);render();}
+
+/* ---- Settings ---- */
+function viewSettings(){
+  const me=mem('me');const d=D();
+  const projList=d.projects.map(p=>`<div class="prow">
+      <div class="pe" style="background:${tint(p.color)}">${p.emoji}</div>
+      <div class="pn">${esc(p.name)}</div>
+      <button class="del" onclick="deleteProject('${p.id}')" title="ลบโปรเจกต์">🗑</button>
+    </div>`).join('');
+  return pagehead('⚙️ ตั้งค่า','จัดการโปรไฟล์ โปรเจกต์ และการเชื่อมต่อ','<button class="btn ghost" onclick="go(\'task\')">← กลับ</button>')
+    +`<div class="grid2">
+      <div>
+        <div class="panel"><h3>👤 โปรไฟล์</h3>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+            ${avatar('me','avatar')}<div><div style="font-weight:800;font-size:15px">${esc(me.name)}</div><div class="cs" style="color:var(--muted);font-size:12.5px">nattawatnummit@gmail.com</div></div>
+          </div>
+          <label style="display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px">ชื่อที่แสดง</label>
+          <div class="addrow" style="margin-bottom:0"><input class="field" id="stName" value="${esc(me.name)}"><button class="btn sm" onclick="renameUser()">บันทึก</button></div>
+        </div>
+        <div class="panel" style="margin-top:18px"><h3>🔗 การเชื่อมต่อ</h3>
+          <div class="conn-card"><div class="ci">📅</div><div><div class="ct">Google Calendar</div><div class="cs">ซิงก์นัดหมายสองทาง</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
+          <div class="conn-card"><div class="ci">📧</div><div><div class="ct">Gmail</div><div class="cs">ติดดาวอีเมล → สร้างงาน</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
+        </div>
+      </div>
+      <div class="panel"><h3>📁 โปรเจกต์ใน${d.label} <span class="more">${d.projects.length} รายการ</span></h3>
+        ${projList||'<div style="color:var(--muted);text-align:center;padding:16px">ยังไม่มีโปรเจกต์</div>'}
+        <div class="section-title">เพิ่มโปรเจกต์ใหม่</div>
+        <div class="addrow"><input class="field" id="npEmoji" value="📌" style="max-width:64px;text-align:center"><input class="field" id="npName" placeholder="ชื่อโปรเจกต์"></div>
+        <div class="swatches" id="npSwatch">${Object.entries(PAL).map(([k,v],i)=>`<div class="sw ${i===0?'on':''}" data-c="${v}" style="background:${v}" onclick="pickSwatch(this)"></div>`).join('')}</div>
+        <button class="btn sm" style="margin-top:14px" onclick="addProject()">＋ เพิ่มโปรเจกต์</button>
+      </div>
+    </div>`;
+}
+let npColor=PAL.coral;
+function pickSwatch(el){npColor=el.dataset.c;document.querySelectorAll('#npSwatch .sw').forEach(s=>s.classList.toggle('on',s===el));}
+function renameUser(){const v=$('#stName').value.trim();if(!v)return;const me=mem('me');me.name=v;me.av=[...v][0]||'ม';render();}
+function addProject(){
+  const name=$('#npName').value.trim();if(!name){$('#npName').focus();return;}
+  const emoji=$('#npEmoji').value.trim()||'📌';
+  D().projects.push({id:'p'+Date.now(),name,emoji,color:npColor});
+  npColor=PAL.coral;render();
+}
+function deleteProject(id){
+  const d=D();
+  const used=d.tasks.some(t=>t.project===id)||(d.expenses||[]).some(e=>e.project===id);
+  if(used&&!confirm('โปรเจกต์นี้มีงานหรือค่าใช้จ่ายผูกอยู่ ต้องการลบทั้งหมดหรือไม่?'))return;
+  d.projects=d.projects.filter(p=>p.id!==id);
+  d.tasks=d.tasks.filter(t=>t.project!==id);
+  if(d.expenses)d.expenses=d.expenses.filter(e=>e.project!==id);
+  render();
+}
+
+/* ---- Task modal ---- */
+function openTaskModal(){
+  const d=D();
+  const opts=d.projects.map(p=>`<option value="${p.id}">${p.emoji} ${esc(p.name)}</option>`).join('');
+  const mopts=members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  const assignField= ws==='shared'?`<div style="flex:1"><label>มอบให้</label><select class="field" id="ntAssign">${mopts}</select></div>`:'';
+  $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h3>＋ เพิ่มงานใหม่</h3>
+    <label>ชื่องาน</label><input class="field" id="ntTitle" placeholder="เช่น จองร้านอาหารวันอาทิตย์">
+    <div class="row"><div style="flex:1"><label>หมวด</label><select class="field" id="ntProj">${opts}</select></div>${assignField}</div>
+    <div class="row"><div style="flex:1"><label>กำหนดส่ง</label><input class="field" id="ntDue" placeholder="วันนี้ / 30 ก.ค."></div>
+    <div style="flex:1"><label>ความสำคัญ</label><select class="field" id="ntPri"><option value="mid">ปานกลาง</option><option value="high">ด่วน</option><option value="low">ทั่วไป</option></select></div></div>
+    <div class="checkline"><input type="checkbox" id="ntCal" checked> 📅 เพิ่มลง Google Calendar ด้วย (สองทาง)</div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveTask()">บันทึกงาน</button></div>
+  </div></div>`;
+}
+function saveTask(){
+  const title=$('#ntTitle').value.trim();if(!title){$('#ntTitle').focus();return;}
+  const t={id:Date.now(),title,project:$('#ntProj').value,due:$('#ntDue').value.trim()||'ไม่ระบุ',pri:$('#ntPri').value,status:'todo',email:false};
+  if(ws==='shared'&&$('#ntAssign'))t.assignee=$('#ntAssign').value;
+  D().tasks.unshift(t);
+  if($('#ntCal').checked){D().events.push({day:23,title,color:proj(t.project).color});}
+  closeModal();render();
+}
+function closeModal(){$('#modalRoot').innerHTML='';}
+
+/* ---------------- nav ---------------- */
+function go(t,special){ if(special){tab=special;} else if(t){tab=t;} caseOpen=null; render(); window.scrollTo(0,0);}
+document.querySelectorAll('#wsSeg button').forEach(b=>b.addEventListener('click',()=>{ws=b.dataset.ws;tab='task';caseOpen=null;taskFilter='all';render();window.scrollTo(0,0);}));
+
+render();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
+</script>
+</body>
+</html>
