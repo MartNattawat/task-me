@@ -30,5 +30,9 @@ npx serve .
 ## Deploy
 เป็น static site — Vercel ตรวจจับอัตโนมัติ ไม่ต้อง build
 
+## เอกสารประกอบ
+- `HANDOFF.md` — สรุปงานค้าง & handoff (เริ่มที่นี่เวลากลับมาทำต่อ)
+- `docs/BACKEND.md` — schema backend เต็ม + ลิงก์ Google Sheets
+
 ## แผนถัดไป (backend จริง)
 Google Sheets + Apps Script, Google login, ซิงก์ Google Calendar สองทาง

@@ -7,7 +7,7 @@
 <meta name="description" content="Task ME — จัดการงาน ปฏิทิน ไทม์ไลน์หลักฐาน และค่าใช้จ่าย แชร์กับครอบครัว">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#F5F1E8">
-<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -246,7 +246,7 @@ const PAL={coral:'#E8A08D',sage:'#9EBE9F',sky:'#98BBD4',lav:'#B9A9D6',butter:'#E
 const tint=(hex)=>hex+'33';
 
 /* ---------------- members ---------------- */
-const members=[
+let members=[
   {id:'me',  name:'มาร์ท',        role:'เจ้าของ',      color:'#D97757', av:'ม', perm:'owner'},
   {id:'ploy',name:'พลอย (ภรรยา)', role:'แก้ไขได้',     color:PAL.rose,  av:'พ', perm:'edit'},
   {id:'dad', name:'คุณพ่อ',        role:'แก้ไขได้',     color:PAL.sage,  av:'พ่', perm:'edit'},
@@ -255,7 +255,7 @@ const members=[
 const mem=id=>members.find(m=>m.id===id);
 
 /* ---------------- data per workspace ---------------- */
-const DATA={
+let DATA={
   personal:{
     label:'พื้นที่ส่วนตัว', sub:'งานและบันทึกของมาร์ทคนเดียว',
     projects:[
@@ -565,6 +565,10 @@ function viewSettings(){
           <div class="conn-card"><div class="ci">📅</div><div><div class="ct">Google Calendar</div><div class="cs">ซิงก์นัดหมายสองทาง</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
           <div class="conn-card"><div class="ci">📧</div><div><div class="ct">Gmail</div><div class="cs">ติดดาวอีเมล → สร้างงาน</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
         </div>
+        <div class="panel" style="margin-top:18px"><h3>💾 ข้อมูล</h3>
+          <div class="cs" style="color:var(--muted);font-size:12.5px;margin-bottom:10px">บันทึกอัตโนมัติในเครื่องนี้ · เปิดใหม่ข้อมูลยังอยู่ (ใช้ออฟไลน์ได้)</div>
+          <button class="btn ghost sm" onclick="resetState()">♻️ รีเซ็ตเป็นข้อมูลตัวอย่าง</button>
+        </div>
       </div>
       <div class="panel"><h3>📁 โปรเจกต์ใน${d.label} <span class="more">${d.projects.length} รายการ</span></h3>
         ${projList||'<div style="color:var(--muted);text-align:center;padding:16px">ยังไม่มีโปรเจกต์</div>'}
@@ -623,6 +627,15 @@ function closeModal(){$('#modalRoot').innerHTML='';}
 /* ---------------- nav ---------------- */
 function go(t,special){ if(special){tab=special;} else if(t){tab=t;} caseOpen=null; render(); window.scrollTo(0,0);}
 document.querySelectorAll('#wsSeg button').forEach(b=>b.addEventListener('click',()=>{ws=b.dataset.ws;tab='task';caseOpen=null;taskFilter='all';render();window.scrollTo(0,0);}));
+
+/* ---------------- persistence (บันทึกถาวรในเครื่อง) ---------------- */
+const LS_KEY='taskme_v1';
+function saveState(){try{localStorage.setItem(LS_KEY,JSON.stringify({members,DATA}));}catch(e){}}
+function loadState(){try{const s=localStorage.getItem(LS_KEY);if(!s)return;const o=JSON.parse(s);if(o&&Array.isArray(o.members)&&o.DATA){members=o.members;DATA=o.DATA;}}catch(e){}}
+function resetState(){if(!confirm('ลบข้อมูลทั้งหมดในเครื่องนี้ แล้วกลับไปใช้ข้อมูลตัวอย่าง?'))return;try{localStorage.removeItem(LS_KEY);}catch(e){}location.reload();}
+loadState();
+const _render=render;
+render=function(){_render();saveState();};
 
 render();
 </script>

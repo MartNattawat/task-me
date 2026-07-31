@@ -1,12 +1,10 @@
-const CACHE = 'taskme-v1';
+const CACHE = 'taskme-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/apple-touch-icon.png',
-  '/icons/favicon-32.png'
+  '/icon.svg',
+  '/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', e => {
