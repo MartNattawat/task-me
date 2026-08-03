@@ -145,11 +145,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:#F7F8FA;border-bottom:1px solid var(--line);}
 .cal-head div{padding:10px;text-align:center;font-size:12px;font-weight:700;color:var(--muted);}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
-.cell{min-height:98px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;}
+.cell{min-height:98px;min-width:0;overflow:hidden;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;}
 .cell .dn{font-size:12.5px;font-weight:700;color:var(--muted);}
 .cell.today .dn{background:var(--clay);color:#fff;border-radius:8px;padding:1px 7px;}
 .cell.dim{background:#F7F8FA;}
-.ev{font-size:11px;font-weight:700;color:#3A4252;border-radius:7px;padding:2px 7px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ev{font-size:11px;font-weight:700;color:#3A4252;border-radius:7px;padding:2px 7px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.ev.tk{background:#E8F0FE;color:#1a56b3;}
 
 /* timeline / cases */
 .banner{background:linear-gradient(120deg,#EAF1FF,#F2F6FF);border:1px solid #DCE7FF;border-radius:16px;padding:13px 16px;font-size:13px;color:#2457D6;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
@@ -355,6 +356,23 @@ function gcalUrl(title,iso,time){
   const base='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title||'');
   return dates? base+'&dates='+dates : base;
 }
+// GCal URL สำหรับ Event: รองรับ เริ่ม/จบ หรือ ทั้งวัน
+function gcalUrlEv(title,iso,start,end,allDay){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));let dates='';
+  if(m){const ymd=m[1]+m[2]+m[3];
+    if(!allDay&&/^\d{2}:\d{2}$/.test(start||'')){
+      const st=ymd+'T'+start.replace(':','')+'00';let en;
+      if(/^\d{2}:\d{2}$/.test(end||'')&&end>start){en=ymd+'T'+end.replace(':','')+'00';}
+      else{const hh=pad2((Number(start.slice(0,2))+1)%24);en=ymd+'T'+hh+start.slice(3,5)+'00';}
+      dates=st+'/'+en;
+    }else{
+      const dd=new Date(Number(m[1]),Number(m[2])-1,Number(m[3])+1);
+      dates=ymd+'/'+isoOf(dd.getFullYear(),dd.getMonth(),dd.getDate()).replace(/-/g,'');
+    }
+  }
+  const base='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title||'');
+  return dates?base+'&dates='+dates:base;
+}
 /* calendar view state */
 const _cnow=new Date(); let calY=_cnow.getFullYear(), calM=_cnow.getMonth();
 let editingEventId=null, editingEntry=null;
@@ -446,9 +464,11 @@ function viewCalendar(){
   for(let day=1;day<=days;day++){
     const iso=isoOf(calY,calM,day);
     const evs=d.events.filter(e=>e.date===iso);
+    const tks=d.tasks.filter(x=>x.due===iso);
     cells+=`<div class="cell ${isThisMonth&&day===t.getDate()?'today':''}" style="cursor:pointer" onclick="openDayModal('${iso}')">
       <div class="dn">${day}</div>
-      ${evs.map(e=>`<div class="ev" style="background:${tint(e.color)}" title="${esc(e.title)}">${esc(e.title)}</div>`).join('')}</div>`;
+      ${evs.map(e=>`<div class="ev" style="background:${tint(e.color)}" title="${esc(e.title)}">${e.allDay?'':(e.start?esc(e.start)+' ':'')}${esc(e.title)}</div>`).join('')}
+      ${tks.map(x=>`<div class="ev tk" title="งาน: ${esc(x.title)}">✓ ${x.time?esc(x.time)+' ':''}${esc(x.title)}</div>`).join('')}</div>`;
   }
   const nav=`<div style="display:flex;gap:6px;align-items:center">
       <button class="btn ghost sm" onclick="calNav(-1)">‹</button>
@@ -465,9 +485,10 @@ function openDayModal(iso){
   const evs=d.events.filter(e=>e.date===iso);
   const opts=d.projects.map(p=>`<option value="${p.id}">${p.emoji} ${esc(p.name)}</option>`).join('');
   const editing=editingEventId?evs.find(e=>String(e.id)===String(editingEventId)):null;
+  const evTime=e=>e.allDay?'ทั้งวัน':(e.start?e.start+(e.end?'–'+e.end:''):'');
   const list=evs.length?evs.map(e=>`<div class="exp" style="padding:10px 0">
-      <div style="flex:1;min-width:0"><div class="et">${esc(e.title)}</div></div>
-      <a class="del" href="${gcalUrl(e.title,e.date)}" target="_blank" rel="noopener" title="เพิ่มลง Google Calendar" style="text-decoration:none;display:flex;align-items:center;justify-content:center">📅</a>
+      <div style="flex:1;min-width:0"><div class="et">${esc(e.title)}</div>${evTime(e)?`<div style="font-size:12px;color:var(--muted)">🕑 ${esc(evTime(e))}</div>`:''}</div>
+      <a class="del" href="${gcalUrlEv(e.title,e.date,e.start,e.end,e.allDay)}" target="_blank" rel="noopener" title="เพิ่มลง Google Calendar" style="text-decoration:none;display:flex;align-items:center;justify-content:center">📅</a>
       <button class="del" onclick="editEvent('${e.id}','${iso}')" title="แก้ไข">✏️</button>
       <button class="del" onclick="deleteEvent('${e.id}','${iso}')" title="ลบ">✕</button>
     </div>`).join(''):'<div style="color:var(--muted);padding:8px 0">ยังไม่มีนัดในวันนี้</div>';
@@ -476,8 +497,11 @@ function openDayModal(iso){
     <div class="panel" style="box-shadow:none;padding:0 0 4px;border:none">${list}</div>
     <div class="section-title" style="margin-top:14px">${editing?'✏️ แก้ไขนัด':'＋ เพิ่มนัดใหม่'}</div>
     <label>ชื่อนัด</label><input class="field" id="evTitle" placeholder="เช่น พาน้องหาหมอฟัน" value="${editing?esc(editing.title):''}">
-    <div class="row"><div style="flex:1"><label>วันที่</label><input class="field" id="evDate" type="date" value="${iso}"></div>
+    <div class="row"><div style="flex:1"><label>วันที่</label><input class="field" id="evDate" type="date" value="${editing?esc(editing.date):iso}"></div>
     <div style="flex:1"><label>หมวด (สี)</label><select class="field" id="evProj">${opts}</select></div></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-weight:600"><input type="checkbox" id="evAllDay" ${editing&&editing.allDay?'checked':''} onchange="document.getElementById('evTimes').style.display=this.checked?'none':'flex'"> ทั้งวัน (All day)</label>
+    <div class="row" id="evTimes" style="display:${editing&&editing.allDay?'none':'flex'}"><div style="flex:1"><label>เวลาเริ่ม</label><input class="field" id="evStart" type="time" value="${editing&&editing.start?esc(editing.start):''}"></div>
+    <div style="flex:1"><label>เวลาจบ</label><input class="field" id="evEnd" type="time" value="${editing&&editing.end?esc(editing.end):''}"></div></div>
     <div class="modal-actions">
       <button class="btn ghost" onclick="editingEventId=null;closeModal()">ปิด</button>
       <button class="btn" onclick="saveEvent('${iso}')">${editing?'บันทึกการแก้ไข':'เพิ่มนัด'}</button></div>
@@ -486,10 +510,13 @@ function openDayModal(iso){
 function saveEvent(iso){
   const t=$('#evTitle').value.trim();if(!t){$('#evTitle').focus();return;}
   const dateVal=$('#evDate').value||iso;
+  const allDay=!!($('#evAllDay')&&$('#evAllDay').checked);
+  const start=allDay?'':(($('#evStart')&&$('#evStart').value)||'');
+  const end=allDay?'':(($('#evEnd')&&$('#evEnd').value)||'');
   const pid=$('#evProj').value;const color=proj(pid)?proj(pid).color:PAL.sky;
   const d=D();
-  if(editingEventId){const ev=d.events.find(x=>String(x.id)===String(editingEventId));if(ev){ev.title=t;ev.date=dateVal;ev.color=color;}editingEventId=null;}
-  else{d.events.push({id:Date.now(),date:dateVal,title:t,color:color});}
+  if(editingEventId){const ev=d.events.find(x=>String(x.id)===String(editingEventId));if(ev){ev.title=t;ev.date=dateVal;ev.color=color;ev.allDay=allDay;ev.start=start;ev.end=end;}editingEventId=null;}
+  else{d.events.push({id:Date.now(),date:dateVal,title:t,color:color,allDay:allDay,start:start,end:end});}
   render();openDayModal(dateVal);
 }
 function editEvent(id,iso){editingEventId=id;openDayModal(iso);}
@@ -753,7 +780,8 @@ function setSync(state){
 /* ---------------- auth (Google Identity Services) ---------------- */
 function initAuth(){
   if(!(window.google && google.accounts && google.accounts.id)){ setTimeout(initAuth,200); return; }
-  google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onGoogleCred, auto_select:true, cancel_on_tap_outside:false });
+  let hint='';try{hint=localStorage.getItem('taskme_email')||'';}catch(e){}
+  google.accounts.id.initialize(Object.assign({ client_id:CLIENT_ID, callback:onGoogleCred, auto_select:true, cancel_on_tap_outside:false }, hint?{login_hint:hint}:{}));
   google.accounts.id.renderButton($('#gbtn'), {theme:'outline',size:'large',shape:'pill',text:'signin_with',width:260});
   google.accounts.id.prompt();   // ล็อกอินอัตโนมัติถ้าเคยยินยอมแล้ว จะไม่ต้องเลือกบัญชีทุกครั้ง
 }
@@ -773,6 +801,7 @@ async function onGoogleCred(resp){
 function applyBootstrap(r){
   members = (r.members||[]).map(m=>({id:m.id,name:m.name,email:m.email,role:m.role,perm:m.perm||'view',color:m.color,av:m.av}));
   MEID = (r.me&&r.me.id) || 'me';
+  try{const meEmail=(r.me&&r.me.email)||((members.find(m=>m.id===MEID)||{}).email);if(meEmail)localStorage.setItem('taskme_email',meEmail);}catch(e){}
   DATA = r.DATA;
   ONLINE = true;
   lastPushed.personal = JSON.stringify(DATA.personal);
@@ -832,6 +861,23 @@ function pushBackend(){
   },700);
 }
 function saveState(){ saveCache(); pushBackend(); }
+// ก่อนปิด/สลับแอป: ส่งข้อมูลที่ยังค้างขึ้น backend ทันที (กันงาน/นัดที่เพิ่งเพิ่มหาย)
+function flushPush(){
+  if(!ONLINE || !ID_TOKEN) return;
+  clearTimeout(pushTimer);
+  ['personal','shared'].forEach(cur=>{
+    const snap=JSON.stringify(DATA[cur]);
+    if(snap===lastPushed[cur]) return;
+    if(cur==='shared' && !canEdit()) return;
+    try{
+      const body=JSON.stringify({token:ID_TOKEN,action:'save',workspace:cur,data:DATA[cur]});
+      const ok=navigator.sendBeacon(API_URL, new Blob([body],{type:'text/plain;charset=utf-8'}));
+      if(ok) lastPushed[cur]=snap;
+    }catch(e){}
+  });
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushPush(); });
+window.addEventListener('pagehide', flushPush);
 function resetState(){
   if(!confirm('ล้างข้อมูลที่แคชในเครื่องนี้ แล้วโหลดใหม่จาก Google Sheet?'))return;
   try{localStorage.removeItem(LS_KEY);}catch(e){}

@@ -22,7 +22,7 @@ const SCHEMA = {
   Members:     ['member_id', 'name', 'email', 'role', 'perm', 'color', 'av'],
   Projects:    ['workspace_id', 'id', 'name', 'emoji', 'color'],
   Tasks:       ['workspace_id', 'id', 'title', 'project', 'assignee', 'due', 'time', 'pri', 'status', 'email'],
-  Events:      ['workspace_id', 'id', 'date', 'title', 'color'],
+  Events:      ['workspace_id', 'id', 'date', 'allday', 'start', 'end', 'title', 'color'],
   Expenses:    ['workspace_id', 'id', 'title', 'project', 'amount', 'date', 'payer'],
   Cases:       ['workspace_id', 'id', 'name', 'emoji', 'color', 'status'],
   CaseEntries: ['case_id', 'entry_id', 'date', 'time', 'what', 'ev'],
@@ -146,7 +146,7 @@ function buildWorkspace(wsId, label, sub) {
     projects: pick('Projects').map(p => ({ id: p.id, name: p.name, emoji: p.emoji, color: p.color })),
     tasks:    pick('Tasks').map(t => ({ id: t.id, title: t.title, project: t.project, assignee: t.assignee || undefined,
                                         due: t.due, time: String(t.time || ''), pri: t.pri, status: t.status, email: t.email === true || t.email === 'TRUE' })),
-    events:   pick('Events').filter(e => isIsoDate(e.date)).map(e => ({ id: e.id, date: String(e.date), title: e.title, color: e.color })),
+    events:   pick('Events').filter(e => isIsoDate(e.date)).map(e => ({ id: e.id, date: String(e.date), allDay: e.allday === true || e.allday === 'TRUE', start: String(e.start || ''), end: String(e.end || ''), title: e.title, color: e.color })),
     expenses: pick('Expenses').map(x => ({ id: x.id, title: x.title, project: x.project, amount: Number(x.amount),
                                            date: x.date, payer: x.payer || undefined })),
     cases:    cases,
@@ -174,7 +174,7 @@ function saveWorkspace(member, workspace, data) {
   (data.projects || []).forEach(p => rows.Projects.push({ workspace_id: wsId, id: p.id, name: p.name, emoji: p.emoji, color: p.color }));
   (data.tasks || []).forEach(t => rows.Tasks.push({ workspace_id: wsId, id: t.id, title: t.title, project: t.project,
       assignee: t.assignee || '', due: t.due, time: t.time || '', pri: t.pri, status: t.status, email: t.email ? true : false }));
-  (data.events || []).forEach(e => rows.Events.push({ workspace_id: wsId, id: e.id, date: e.date, title: e.title, color: e.color }));
+  (data.events || []).forEach(e => rows.Events.push({ workspace_id: wsId, id: e.id, date: e.date, allday: e.allDay ? true : false, start: e.start || '', end: e.end || '', title: e.title, color: e.color }));
   (data.expenses || []).forEach(x => rows.Expenses.push({ workspace_id: wsId, id: x.id, title: x.title, project: x.project,
       amount: x.amount, date: x.date, payer: x.payer || '' }));
   (data.cases || []).forEach(c => {
