@@ -791,12 +791,13 @@ async function onGoogleCred(resp){
   try{
     const r = await api('bootstrap');
     if(r.error){
+      const ov=$('#loginOverlay'); if(ov)ov.style.display='';   // เผื่อซ่อนไว้ตอนโหลดเร็ว → แสดงกลับมาให้เห็น error
       if(r.error==='not_a_member') $('#loginErr').textContent='อีเมล '+(r.email||'')+'\nยังไม่อยู่ในรายชื่อสมาชิก (แท็บ Members)\nเพิ่มอีเมลนี้ในชีตก่อน แล้วลองใหม่';
       else $('#loginErr').textContent='เข้าสู่ระบบไม่สำเร็จ: '+(r.message||r.error);
-      ID_TOKEN=null; return;
+      ID_TOKEN=null; setSync('err'); return;
     }
     applyBootstrap(r);
-  }catch(e){ $('#loginErr').textContent='เชื่อมต่อ backend ไม่ได้: '+String(e.message||e); ID_TOKEN=null; }
+  }catch(e){ setSync('err'); $('#loginErr').textContent='เชื่อมต่อ backend ไม่ได้: '+String(e.message||e); ID_TOKEN=null; }
 }
 function applyBootstrap(r){
   members = (r.members||[]).map(m=>({id:m.id,name:m.name,email:m.email,role:m.role,perm:m.perm||'view',color:m.color,av:m.av}));
@@ -804,12 +805,25 @@ function applyBootstrap(r){
   try{const meEmail=(r.me&&r.me.email)||((members.find(m=>m.id===MEID)||{}).email);if(meEmail)localStorage.setItem('taskme_email',meEmail);}catch(e){}
   DATA = r.DATA;
   ONLINE = true;
+  // เทียบกับ backend เป็นค่าเริ่มต้น
   lastPushed.personal = JSON.stringify(DATA.personal);
   lastPushed.shared   = JSON.stringify(DATA.shared);
+  // กู้คืนข้อมูลที่เพิ่งเพิ่มแต่ยังไม่ได้ยืนยันบันทึก (เช่น เพิ่ม Event/Task แล้วปิดแอปเร็ว):
+  // ถ้า workspace ถูกทำเครื่องหมายว่าค้าง ให้ใช้ของในเครื่องแทนของ backend แล้วดันขึ้นใหม่
+  const unsynced=getUnsynced(); const cache=readCacheData();
+  const toRepush=[];
+  ['personal','shared'].forEach(cur=>{
+    if(unsynced[cur] && cache && cache[cur]){
+      DATA[cur]=cache[cur];
+      if(JSON.stringify(DATA[cur])!==lastPushed[cur]) toRepush.push(cur);
+      else setUnsynced(cur,false);
+    }
+  });
   saveCache();
   $('#loginOverlay').style.display='none';
-  setSync('ok');
+  setSync(toRepush.length?'busy':'ok');
   render();
+  toRepush.forEach(cur=>forcePush(cur));   // บันทึกข้อมูลค้างขึ้น backend ให้เรียบร้อย
 }
 function signOut(){
   try{ google.accounts.id.disableAutoSelect(); }catch(e){}
@@ -840,39 +854,52 @@ async function inviteMember(){
 
 /* ---------------- persistence: backend + local cache ---------------- */
 const LS_KEY='taskme_v2';
+const LS_UNSYNCED='taskme_unsynced';   // เก็บว่า workspace ไหนยังไม่ได้ยืนยันว่าบันทึกขึ้น backend สำเร็จ
 function saveCache(){try{localStorage.setItem(LS_KEY,JSON.stringify({members,DATA,MEID}));}catch(e){}}
 function loadCache(){try{const s=localStorage.getItem(LS_KEY);if(!s)return;const o=JSON.parse(s);
   if(o&&Array.isArray(o.members)&&o.DATA){members=o.members;DATA=o.DATA;if(o.MEID)MEID=o.MEID;}}catch(e){}}
+function readCacheData(){try{const s=localStorage.getItem(LS_KEY);if(!s)return null;const o=JSON.parse(s);return (o&&o.DATA)||null;}catch(e){return null;}}
+// ธง "ยังไม่ได้ซิงก์" อยู่ใน localStorage จึงอยู่รอดแม้ปิดแอป — ล้างเฉพาะเมื่อบันทึกสำเร็จจริงเท่านั้น
+function getUnsynced(){try{return JSON.parse(localStorage.getItem(LS_UNSYNCED)||'{}')||{};}catch(e){return {};}}
+function setUnsynced(cur,val){try{const u=getUnsynced();if(val)u[cur]=1;else delete u[cur];localStorage.setItem(LS_UNSYNCED,JSON.stringify(u));}catch(e){}}
 function pushBackend(){
   if(!ONLINE || !ID_TOKEN) return;
   const cur=ws;
   if(JSON.stringify(DATA[cur])===lastPushed[cur]) return;   // ไม่มีอะไรเปลี่ยน
   if(cur==='shared' && !canEdit()){ setSync('ro'); return; }
+  setUnsynced(cur,true);        // มีการแก้ไข → ทำเครื่องหมายค้าง (ล้างเมื่อยืนยันบันทึกสำเร็จ)
   setSync('busy');
   clearTimeout(pushTimer);
-  pushTimer=setTimeout(async ()=>{
-    const snap=JSON.stringify(DATA[cur]);
-    try{
-      const r=await api('save',{workspace:cur,data:DATA[cur]});
-      if(r&&r.ok){ lastPushed[cur]=snap; setSync('ok'); }
-      else if(r&&r.error==='forbidden'){ setSync('ro'); }
-      else { setSync('err'); }
-    }catch(e){ setSync('err'); }
-  },700);
+  pushTimer=setTimeout(()=>{ forcePush(cur); },700);
+}
+// บันทึกทันทีแบบยืนยันผล (ใช้ตอน debounce ครบ และตอนล็อกอินเพื่อดันข้อมูลค้างที่เหลือ)
+async function forcePush(cur){
+  if(!ONLINE || !ID_TOKEN) return;
+  if(cur==='shared' && !canEdit()){ setSync('ro'); return; }
+  const snap=JSON.stringify(DATA[cur]);
+  if(snap===lastPushed[cur]){ setUnsynced(cur,false); return; }
+  setSync('busy');
+  try{
+    const r=await api('save',{workspace:cur,data:DATA[cur]});
+    if(r&&r.ok){ lastPushed[cur]=snap; setUnsynced(cur,false); setSync('ok'); }
+    else if(r&&r.error==='forbidden'){ setSync('ro'); }
+    else { setSync('err'); }               // บันทึกไม่สำเร็จ → คงธงค้างไว้ ครั้งหน้าจะดันซ้ำ
+  }catch(e){ setSync('err'); }             // ออฟไลน์/พลาด → คงธงค้างไว้
 }
 function saveState(){ saveCache(); pushBackend(); }
 // ก่อนปิด/สลับแอป: ส่งข้อมูลที่ยังค้างขึ้น backend ทันที (กันงาน/นัดที่เพิ่งเพิ่มหาย)
+// sendBeacon อาจส่งไม่สำเร็จ (Apps Script redirect ตอน unload) จึง "ไม่" ล้างธงค้าง —
+// ธงจะถูกล้างก็ต่อเมื่อ forcePush ยืนยันสำเร็จในครั้งต่อไปที่เปิดแอป
 function flushPush(){
   if(!ONLINE || !ID_TOKEN) return;
   clearTimeout(pushTimer);
   ['personal','shared'].forEach(cur=>{
-    const snap=JSON.stringify(DATA[cur]);
-    if(snap===lastPushed[cur]) return;
+    if(JSON.stringify(DATA[cur])===lastPushed[cur]) return;
     if(cur==='shared' && !canEdit()) return;
+    setUnsynced(cur,true);
     try{
       const body=JSON.stringify({token:ID_TOKEN,action:'save',workspace:cur,data:DATA[cur]});
-      const ok=navigator.sendBeacon(API_URL, new Blob([body],{type:'text/plain;charset=utf-8'}));
-      if(ok) lastPushed[cur]=snap;
+      navigator.sendBeacon(API_URL, new Blob([body],{type:'text/plain;charset=utf-8'}));
     }catch(e){}
   });
 }
@@ -889,6 +916,12 @@ const _render=render;
 render=function(){_render();saveState();};
 
 render();          // แสดงข้อมูลแคช/ตัวอย่างไว้เบื้องหลัง overlay
+// โหลดเร็ว: ถ้ามีแคช + เคยล็อกอินไว้แล้ว ให้แสดงข้อมูลทันทีไม่ต้องรอ backend (~5วิ)
+// แล้วปล่อยให้ applyBootstrap ซิงก์เบื้องหลัง (ปลอดภัยแล้วเพราะมีระบบกันข้อมูลค้างหาย)
+try{
+  const hadCache=readCacheData(); const hadEmail=localStorage.getItem('taskme_email');
+  if(hadCache && hadEmail){ const ov=$('#loginOverlay'); if(ov)ov.style.display='none'; setSync('busy'); }
+}catch(e){}
 initAuth();        // เปิดปุ่มล็อกอิน Google
 </script>
 <script>
