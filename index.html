@@ -304,11 +304,9 @@ let pushTimer=null;
 const canEdit=()=>ws==='personal'||['owner','edit'].includes(((mem(MEID)||{}).perm)||'view');
 
 /* ---------------- members ---------------- */
+// placeholder ก่อนล็อกอิน — หลังล็อกอิน applyBootstrap() จะแทนที่ด้วยสมาชิกจริงจากชีต
 let members=[
-  {id:'me',  name:'มาร์ท',        role:'เจ้าของ',      color:'#D97757', av:'ม', perm:'owner'},
-  {id:'ploy',name:'พลอย (ภรรยา)', role:'แก้ไขได้',     color:PAL.rose,  av:'พ', perm:'edit'},
-  {id:'dad', name:'คุณพ่อ',        role:'แก้ไขได้',     color:PAL.sage,  av:'พ่', perm:'edit'},
-  {id:'kao', name:'น้องข้าว',      role:'ดูอย่างเดียว', color:PAL.butter,av:'ข', perm:'view'},
+  {id:'me', name:'มาร์ท', role:'เจ้าของ', color:'#D97757', av:'ม', perm:'owner'},
 ];
 const mem=id=>members.find(m=>m.id===id);
 
@@ -549,11 +547,17 @@ function viewShare(){
           <span class="perm ${m.perm}">${m.perm==='owner'?'เจ้าของ':m.perm==='edit'?'แก้ไขได้':'ดูอย่างเดียว'}</span></div>`).join('')}
       </div>
       <div class="panel"><h3>✉️ เชิญสมาชิกใหม่</h3>
-        <div class="addrow"><input placeholder="อีเมล Gmail ของสมาชิก"><button class="btn sm" onclick="alert('เดโม: ส่งคำเชิญทางอีเมลแล้ว')">เชิญ</button></div>
-        <div class="sharelink">🔗 <code>taskme.app/join/holista-family</code><button class="btn ghost sm" style="margin-left:auto" onclick="alert('คัดลอกลิงก์แล้ว')">คัดลอก</button></div>
-        <div class="section-title">การเชื่อมต่อ</div>
-        <div class="conn-card"><div class="ci">📅</div><div><div class="ct">Google Calendar</div><div class="cs">ซิงก์นัดหมายสองทาง</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
-        <div class="conn-card"><div class="ci">📧</div><div><div class="ct">Gmail</div><div class="cs">ติดดาวอีเมล → สร้างงาน</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
+        <div class="addrow">
+          <input id="inviteEmail" placeholder="อีเมล Gmail ของสมาชิก">
+          <select id="invitePerm" class="field" style="max-width:130px">
+            <option value="edit">แก้ไขได้</option>
+            <option value="view">ดูอย่างเดียว</option>
+          </select>
+          <button class="btn sm" onclick="inviteMember()">เชิญ</button>
+        </div>
+        <div id="inviteMsg" class="mrole" style="margin-top:6px"></div>
+        <div class="section-title" style="margin-top:12px">วิธีเข้าใช้</div>
+        <div class="mrole">คนที่ถูกเชิญ เปิด <code>task-me-nu.vercel.app</code> แล้วล็อกอิน Google ด้วยอีเมลเดียวกับที่เชิญได้เลย</div>
       </div>
     </div>`;
 }
@@ -751,6 +755,27 @@ function signOut(){
   try{ google.accounts.id.disableAutoSelect(); }catch(e){}
   ID_TOKEN=null; ONLINE=false;
   location.reload();
+}
+/* เชิญสมาชิกใหม่ — เพิ่มเข้าแท็บ Members ในชีตจริงผ่าน backend */
+async function inviteMember(){
+  const inp=$('#inviteEmail'); const msg=$('#inviteMsg');
+  const email=((inp&&inp.value)||'').trim().toLowerCase();
+  const perm=($('#invitePerm')&&$('#invitePerm').value)||'edit';
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ if(msg)msg.textContent='กรุณาใส่อีเมลให้ถูกต้อง'; return; }
+  if(members.some(m=>String(m.email).toLowerCase()===email)){ if(msg)msg.textContent='อีเมลนี้เป็นสมาชิกอยู่แล้ว'; return; }
+  if(!ONLINE||!ID_TOKEN){ if(msg)msg.textContent='ต้องล็อกอินก่อนจึงจะเชิญได้'; return; }
+  if(msg)msg.textContent='กำลังเพิ่มสมาชิก…';
+  try{
+    const r=await api('addMember',{email:email,perm:perm});
+    if(r&&r.ok&&r.member){
+      members.push({id:r.member.id,name:r.member.name,email:r.member.email,role:r.member.role,perm:r.member.perm,color:r.member.color,av:r.member.av});
+      saveCache(); render();
+      alert('เพิ่มสมาชิก '+r.member.name+' ('+r.member.email+') แล้ว');
+    }else if(r&&r.error==='forbidden'){ if(msg)msg.textContent='คุณไม่มีสิทธิ์เชิญสมาชิก (ต้องเป็นเจ้าของหรือแก้ไขได้)'; }
+    else if(r&&r.error==='exists'){ if(msg)msg.textContent='อีเมลนี้เป็นสมาชิกอยู่แล้ว'; }
+    else if(r&&r.error==='bad_email'){ if(msg)msg.textContent='อีเมลไม่ถูกต้อง'; }
+    else{ if(msg)msg.textContent='เพิ่มไม่สำเร็จ: '+((r&&(r.message||r.error))||'ไม่ทราบสาเหตุ'); }
+  }catch(e){ if(msg)msg.textContent='เชื่อมต่อไม่ได้: '+String(e.message||e); }
 }
 
 /* ---------------- persistence: backend + local cache ---------------- */

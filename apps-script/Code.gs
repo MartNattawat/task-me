@@ -45,6 +45,7 @@ function doPost(e) {
     switch (req.action) {
       case 'bootstrap': return json(bootstrap(member));
       case 'save':      return json(saveWorkspace(member, req.workspace, req.data));
+      case 'addMember': return json(addMember(member, req));
       case 'ping':      return json({ ok: true, email: me.email, perm: member.perm });
       default:          return json({ error: 'unknown_action', action: req.action });
     }
@@ -199,6 +200,33 @@ function belongsToWs(caseId, allCases, wsId) {
 }
 
 /* ============================================================
+ *  addMember — เชิญสมาชิกใหม่ (เพิ่มแถวในแท็บ Members จริง)
+ *  เฉพาะ owner/edit เท่านั้นที่เชิญได้
+ * ============================================================ */
+function addMember(inviter, req) {
+  if (!(inviter.perm === 'owner' || inviter.perm === 'edit')) return { error: 'forbidden' };
+  const email = String(req.email || '').trim().toLowerCase();
+  if (!email || email.indexOf('@') < 1) return { error: 'bad_email' };
+
+  const all = readAll('Members');
+  if (all.some(m => String(m.email).toLowerCase() === email)) return { error: 'exists' };
+
+  const perm = (req.perm === 'view' || req.perm === 'edit') ? req.perm : 'edit';
+  const role = perm === 'edit' ? 'แก้ไขได้' : 'ดูอย่างเดียว';
+  const name = String(req.name || '').trim() || email.split('@')[0];
+  const palette = ['#E8998D', '#E8A0BF', '#A3B18A', '#F2D091', '#98BBD4', '#B9A9D6'];
+  const color = palette[all.length % palette.length];
+  const av = name.slice(0, 1);
+  const id = 'm' + Date.now();
+
+  const member = { member_id: id, name: name, email: email, role: role, perm: perm, color: color, av: av };
+  all.push(member);
+  writeAll('Members', all);
+
+  return { ok: true, member: { id: id, name: name, email: email, role: role, perm: perm, color: color, av: av } };
+}
+
+/* ============================================================
  *  setup() — รันครั้งเดียวจาก editor เพื่อสร้างแท็บ + ใส่ข้อมูลตัวอย่าง
  * ============================================================ */
 function setup() {
@@ -213,12 +241,9 @@ function setup() {
   const def = book.getSheetByName('Sheet1');
   if (def && book.getSheets().length > 1) book.deleteSheet(def);
 
-  // ใส่สมาชิกตัวอย่าง — แก้อีเมลให้ตรงกับบัญชี Google จริงของแต่ละคน
+  // ใส่เจ้าของคนเดียว — สมาชิกที่เหลือเชิญผ่านปุ่ม "เชิญ" ในแอปได้เลย
   writeAll('Members', [
-    { member_id: 'me',   name: 'มาร์ท',        email: 'nattawatnummit@gmail.com', role: 'เจ้าของ',      perm: 'owner', color: '#D97757', av: 'ม' },
-    { member_id: 'ploy', name: 'พลอย (ภรรยา)', email: 'ploy@example.com',         role: 'แก้ไขได้',     perm: 'edit',  color: '#E8A0BF', av: 'พ' },
-    { member_id: 'dad',  name: 'คุณพ่อ',        email: 'dad@example.com',          role: 'แก้ไขได้',     perm: 'edit',  color: '#A3B18A', av: 'พ่' },
-    { member_id: 'kao',  name: 'น้องข้าว',      email: 'kao@example.com',          role: 'ดูอย่างเดียว', perm: 'view',  color: '#F2D091', av: 'ข' },
+    { member_id: 'me', name: 'มาร์ท', email: 'nattawatnummit@gmail.com', role: 'เจ้าของ', perm: 'owner', color: '#D97757', av: 'ม' },
   ]);
 
   // seed พื้นที่ครอบครัว (shared) เล็กน้อย ให้เปิดมาไม่ว่าง
