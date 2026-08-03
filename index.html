@@ -814,6 +814,9 @@ function applyBootstrap(r){
   const toRepush=[];
   ['personal','shared'].forEach(cur=>{
     if(unsynced[cur] && cache && cache[cur]){
+      // กันเคสมือถือ: อย่าเอาแคชที่ "ว่างเปล่า" มาทับข้อมูล backend ที่ "มีอยู่จริง"
+      // (ธงค้างเก่า + แคชว่างในเครื่องนี้ ไม่ควรลบงาน/นัดที่บันทึกไว้แล้วบนชีต)
+      if(!wsHasContent(cache[cur]) && wsHasContent(DATA[cur])){ setUnsynced(cur,false); return; }
       DATA[cur]=cache[cur];
       if(JSON.stringify(DATA[cur])!==lastPushed[cur]) toRepush.push(cur);
       else setUnsynced(cur,false);
@@ -859,6 +862,8 @@ function saveCache(){try{localStorage.setItem(LS_KEY,JSON.stringify({members,DAT
 function loadCache(){try{const s=localStorage.getItem(LS_KEY);if(!s)return;const o=JSON.parse(s);
   if(o&&Array.isArray(o.members)&&o.DATA){members=o.members;DATA=o.DATA;if(o.MEID)MEID=o.MEID;}}catch(e){}}
 function readCacheData(){try{const s=localStorage.getItem(LS_KEY);if(!s)return null;const o=JSON.parse(s);return (o&&o.DATA)||null;}catch(e){return null;}}
+// workspace มี "เนื้อหาจริง" ไหม (มีงาน/นัด/เคส/รายจ่าย/โปรเจกต์อย่างน้อย 1)
+function wsHasContent(w){return !!w && ['tasks','events','cases','expenses','projects'].some(k=>Array.isArray(w[k])&&w[k].length>0);}
 // ธง "ยังไม่ได้ซิงก์" อยู่ใน localStorage จึงอยู่รอดแม้ปิดแอป — ล้างเฉพาะเมื่อบันทึกสำเร็จจริงเท่านั้น
 function getUnsynced(){try{return JSON.parse(localStorage.getItem(LS_UNSYNCED)||'{}')||{};}catch(e){return {};}}
 function setUnsynced(cur,val){try{const u=getUnsynced();if(val)u[cur]=1;else delete u[cur];localStorage.setItem(LS_UNSYNCED,JSON.stringify(u));}catch(e){}}
@@ -920,6 +925,11 @@ function resetState(){
 }
 
 loadCache();
+// ตั้งฐานเทียบ (lastPushed) ให้ตรงกับแคชที่เพิ่งโหลด — ก่อนที่ render() แรกจะทำงาน
+// กันไม่ให้ render() ตอนเปิดแอป (ยังไม่ล็อกอิน) ไปตั้งธง "ค้าง" แบบผิด ๆ
+// ธงผิดนี้เองที่ทำให้ applyBootstrap เอาแคช (ที่อาจว่างเปล่าในมือถือ) ทับข้อมูลจริงจาก backend
+lastPushed.personal = JSON.stringify(DATA.personal);
+lastPushed.shared   = JSON.stringify(DATA.shared);
 const _render=render;
 render=function(){_render();saveState();};
 
