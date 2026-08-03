@@ -775,6 +775,21 @@ function setSync(state){
   const map={busy:['busy','ซิงก์…'],ok:['ok','ซิงก์แล้ว'],err:['err','ออฟไลน์'],ro:['err','อ่านอย่างเดียว']};
   el.className='syncpill'+(map[state]?' '+map[state][0]:'');
   el.textContent=map[state]?map[state][1]:'';
+  lastSyncState=state; dbg();
+}
+/* ---- debug readout ชั่วคราว (ไว้หาจุดที่เซฟพลาด) — ลบออกได้เมื่อแก้เสร็จ ---- */
+let lastSyncState='', lastSaveMsg='—';
+function dbg(){
+  let el=$('#dbgBar');
+  if(!el){ el=document.createElement('div'); el.id='dbgBar';
+    el.style.cssText='position:fixed;left:6px;bottom:6px;z-index:99999;font:11px/1.4 monospace;background:rgba(0,0,0,.82);color:#7CFC9A;padding:6px 9px;border-radius:8px;max-width:94vw;white-space:pre-wrap;pointer-events:none';
+    document.body.appendChild(el); }
+  const u=(()=>{try{return localStorage.getItem('taskme_unsynced')||'{}';}catch(e){return '?';}})();
+  const nt=(DATA.personal?DATA.personal.tasks.length:'?'), ne=(DATA.personal?DATA.personal.events.length:'?');
+  const st=(DATA.shared?DATA.shared.tasks.length:'?'), se=(DATA.shared?DATA.shared.events.length:'?');
+  el.textContent='DBG online='+(ONLINE?1:0)+' token='+(ID_TOKEN?1:0)+' sync='+lastSyncState
+    +'\nunsynced='+u+' save='+lastSaveMsg
+    +'\npersonal t/e='+nt+'/'+ne+'  shared t/e='+st+'/'+se;
 }
 
 /* ---------------- auth (Google Identity Services) ---------------- */
@@ -863,11 +878,13 @@ function readCacheData(){try{const s=localStorage.getItem(LS_KEY);if(!s)return n
 function getUnsynced(){try{return JSON.parse(localStorage.getItem(LS_UNSYNCED)||'{}')||{};}catch(e){return {};}}
 function setUnsynced(cur,val){try{const u=getUnsynced();if(val)u[cur]=1;else delete u[cur];localStorage.setItem(LS_UNSYNCED,JSON.stringify(u));}catch(e){}}
 function pushBackend(){
-  if(!ONLINE || !ID_TOKEN) return;
   const cur=ws;
-  if(JSON.stringify(DATA[cur])===lastPushed[cur]) return;   // ไม่มีอะไรเปลี่ยน
+  if(JSON.stringify(DATA[cur])===lastPushed[cur]) return;   // ไม่มีอะไรเปลี่ยนจากที่ยืนยันบันทึกล่าสุด
+  // มีการเปลี่ยนแปลง → ทำเครื่องหมาย "ค้าง" เสมอ แม้ยังไม่ล็อกอินเสร็จ (กันข้อมูลหายช่วง fast-load)
+  setUnsynced(cur,true);
+  dbg();
+  if(!ONLINE || !ID_TOKEN) return;   // ยังไม่พร้อมส่ง → เก็บไว้ ดันตอน bootstrap
   if(cur==='shared' && !canEdit()){ setSync('ro'); return; }
-  setUnsynced(cur,true);        // มีการแก้ไข → ทำเครื่องหมายค้าง (ล้างเมื่อยืนยันบันทึกสำเร็จ)
   setSync('busy');
   clearTimeout(pushTimer);
   pushTimer=setTimeout(()=>{ forcePush(cur); },700);
@@ -881,10 +898,10 @@ async function forcePush(cur){
   setSync('busy');
   try{
     const r=await api('save',{workspace:cur,data:DATA[cur]});
-    if(r&&r.ok){ lastPushed[cur]=snap; setUnsynced(cur,false); setSync('ok'); }
-    else if(r&&r.error==='forbidden'){ setSync('ro'); }
-    else { setSync('err'); }               // บันทึกไม่สำเร็จ → คงธงค้างไว้ ครั้งหน้าจะดันซ้ำ
-  }catch(e){ setSync('err'); }             // ออฟไลน์/พลาด → คงธงค้างไว้
+    if(r&&r.ok){ lastPushed[cur]=snap; setUnsynced(cur,false); lastSaveMsg=cur+':ok'; setSync('ok'); }
+    else if(r&&r.error==='forbidden'){ lastSaveMsg=cur+':forbidden'; setSync('ro'); }
+    else { lastSaveMsg=cur+':'+((r&&(r.error||r.message))||'no_ok'); setSync('err'); }   // บันทึกไม่สำเร็จ → คงธงค้าง
+  }catch(e){ lastSaveMsg=cur+':EXC '+String(e&&e.message||e).slice(0,40); setSync('err'); }  // ออฟไลน์/พลาด → คงธงค้าง
 }
 function saveState(){ saveCache(); pushBackend(); }
 // ก่อนปิด/สลับแอป: ส่งข้อมูลที่ยังค้างขึ้น backend ทันที (กันงาน/นัดที่เพิ่งเพิ่มหาย)
@@ -922,6 +939,7 @@ try{
   const hadCache=readCacheData(); const hadEmail=localStorage.getItem('taskme_email');
   if(hadCache && hadEmail){ const ov=$('#loginOverlay'); if(ov)ov.style.display='none'; setSync('busy'); }
 }catch(e){}
+dbg();             // แสดงแถบ debug ตั้งแต่เริ่ม
 initAuth();        // เปิดปุ่มล็อกอิน Google
 </script>
 <script>
