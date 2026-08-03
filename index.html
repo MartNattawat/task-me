@@ -114,6 +114,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .pri.low{background:#E4F3E7;color:#2F9E44;}
 .mail-badge{font-size:11px;color:var(--clay);font-weight:700;}
 .due{font-size:12px;color:var(--muted);font-weight:600;}
+.gcal-link{font-size:11px;font-weight:700;color:#1a73e8;background:#e8f0fe;border-radius:999px;padding:2px 9px;text-decoration:none;white-space:nowrap;}
+.gcal-link:hover{background:#d2e3fc;}
 .addrow{display:flex;gap:10px;margin-bottom:14px;}
 .addrow input,.field,select.field{flex:1;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;background:var(--panel);color:var(--ink);outline:none;}
 .field:focus,.addrow input:focus{border-color:var(--clay);box-shadow:0 0 0 3px var(--clay-soft);}
@@ -397,12 +399,15 @@ function pagehead(title,sub,actions=''){return `<div class="pagehead"><div><h1>$
 
 /* ---- Tasks ---- */
 let taskFilter='all';
+function isISO(s){return /^\d{4}-\d{2}-\d{2}$/.test(String(s||''));}
+function dueText(t){return isISO(t.due)?isoToThai(t.due)+(t.time?' '+esc(t.time):''):esc(t.due||'ไม่ระบุ');}
 function taskRow(t){
   const done=t.status==='done';
+  const gc=isISO(t.due)?`<a class="gcal-link" href="${gcalUrl(t.title,t.due,t.time)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="เพิ่มลงปฏิทิน Google">📅 Google</a>`:'';
   return `<div class="task ${done?'done':''}">
     <button class="check" onclick="toggleTask(${t.id})">${done?'✓':''}</button>
     <div class="t-body"><div class="t-title">${esc(t.title)} ${t.email?'<span class="mail-badge">📧 จากอีเมล</span>':''}</div>
-      <div class="t-meta">${ptag(t.project)}<span class="pri ${t.pri}">${priLabel[t.pri]}</span><span class="due">📅 ${esc(t.due)}</span></div></div>
+      <div class="t-meta">${ptag(t.project)}<span class="pri ${t.pri}">${priLabel[t.pri]}</span><span class="due">📅 ${dueText(t)}</span>${gc}</div></div>
     ${t.assignee?avatar(t.assignee):''}
     <button class="del" onclick="editTask(${t.id})" title="แก้ไข">✏️</button>
     <button class="del" onclick="deleteTask(${t.id})" title="ลบ">✕</button>
@@ -412,7 +417,7 @@ function editTask(id){openTaskModal(id);}
 function deleteTask(id){if(!confirm('ลบงานนี้? การลบยกเลิกไม่ได้'))return;const d=D();d.tasks=d.tasks.filter(t=>t.id!==id);render();}
 function viewTasks(){
   const d=D();let list=d.tasks.slice();
-  if(taskFilter==='today')list=list.filter(t=>t.due==='วันนี้');
+  if(taskFilter==='today')list=list.filter(t=>t.due===todayISO()||t.due==='วันนี้');
   else if(taskFilter!=='all')list=list.filter(t=>t.project===taskFilter);
   const chip=(v,l)=>`<button class="chip ${taskFilter===v?'on':''}" onclick="setFilter('${v}')">${l}</button>`;
   const doing=d.tasks.filter(t=>t.status==='doing').length, done=d.tasks.filter(t=>t.status==='done').length;
@@ -703,8 +708,9 @@ function openTaskModal(editId){
     <h3>${t?'✏️ แก้ไขงาน':'＋ เพิ่มงานใหม่'}</h3>
     <label>ชื่องาน</label><input class="field" id="ntTitle" placeholder="เช่น จองร้านอาหารวันอาทิตย์" value="${t?esc(t.title):''}">
     <div class="row"><div style="flex:1"><label>หมวด</label><select class="field" id="ntProj">${opts}</select></div>${assignField}</div>
-    <div class="row"><div style="flex:1"><label>กำหนดส่ง</label><input class="field" id="ntDue" placeholder="วันนี้ / 30 ก.ค." value="${t?esc(t.due):''}"></div>
-    <div style="flex:1"><label>ความสำคัญ</label><select class="field" id="ntPri">${priOpt('mid','ปานกลาง')}${priOpt('high','ด่วน')}${priOpt('low','ทั่วไป')}</select></div></div>
+    <div class="row"><div style="flex:1"><label>วันกำหนดส่ง</label><input class="field" type="date" id="ntDue" value="${t&&isISO(t.due)?t.due:''}"></div>
+    <div style="flex:1"><label>เวลา (ถ้ามี)</label><input class="field" type="time" id="ntTime" value="${t&&t.time?esc(t.time):''}"></div></div>
+    <div class="row"><div style="flex:1"><label>ความสำคัญ</label><select class="field" id="ntPri">${priOpt('mid','ปานกลาง')}${priOpt('high','ด่วน')}${priOpt('low','ทั่วไป')}</select></div></div>
     <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveTask(${editId||''})">${t?'บันทึกการแก้ไข':'บันทึกงาน'}</button></div>
   </div></div>`;
 }
@@ -713,10 +719,10 @@ function saveTask(editId){
   const d=D();
   if(editId){
     const t=d.tasks.find(x=>x.id===editId);
-    if(t){t.title=title;t.project=$('#ntProj').value;t.due=$('#ntDue').value.trim()||'ไม่ระบุ';t.pri=$('#ntPri').value;
+    if(t){t.title=title;t.project=$('#ntProj').value;t.due=$('#ntDue').value||'';t.time=($('#ntTime')&&$('#ntTime').value)||'';t.pri=$('#ntPri').value;
       if(ws==='shared'&&$('#ntAssign'))t.assignee=$('#ntAssign').value;}
   }else{
-    const t={id:Date.now(),title,project:$('#ntProj').value,due:$('#ntDue').value.trim()||'ไม่ระบุ',pri:$('#ntPri').value,status:'todo',email:false};
+    const t={id:Date.now(),title,project:$('#ntProj').value,due:$('#ntDue').value||'',time:($('#ntTime')&&$('#ntTime').value)||'',pri:$('#ntPri').value,status:'todo',email:false};
     if(ws==='shared'&&$('#ntAssign'))t.assignee=$('#ntAssign').value;
     d.tasks.unshift(t);
   }
@@ -747,8 +753,9 @@ function setSync(state){
 /* ---------------- auth (Google Identity Services) ---------------- */
 function initAuth(){
   if(!(window.google && google.accounts && google.accounts.id)){ setTimeout(initAuth,200); return; }
-  google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onGoogleCred });
+  google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onGoogleCred, auto_select:true, cancel_on_tap_outside:false });
   google.accounts.id.renderButton($('#gbtn'), {theme:'outline',size:'large',shape:'pill',text:'signin_with',width:260});
+  google.accounts.id.prompt();   // ล็อกอินอัตโนมัติถ้าเคยยินยอมแล้ว จะไม่ต้องเลือกบัญชีทุกครั้ง
 }
 async function onGoogleCred(resp){
   ID_TOKEN = resp.credential;
