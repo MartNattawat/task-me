@@ -22,10 +22,10 @@ const SCHEMA = {
   Members:     ['member_id', 'name', 'email', 'role', 'perm', 'color', 'av'],
   Projects:    ['workspace_id', 'id', 'name', 'emoji', 'color'],
   Tasks:       ['workspace_id', 'id', 'title', 'project', 'assignee', 'due', 'pri', 'status', 'email'],
-  Events:      ['workspace_id', 'id', 'day', 'title', 'color'],
+  Events:      ['workspace_id', 'id', 'date', 'title', 'color'],
   Expenses:    ['workspace_id', 'id', 'title', 'project', 'amount', 'date', 'payer'],
   Cases:       ['workspace_id', 'id', 'name', 'emoji', 'color', 'status'],
-  CaseEntries: ['case_id', 'entry_id', 'date', 'what', 'ev'],
+  CaseEntries: ['case_id', 'entry_id', 'date', 'time', 'what', 'ev'],
 };
 // entity ที่ผูกกับ workspace (ใช้ตอน bootstrap/save ต่อ workspace)
 const WS_ENTITIES = ['Projects', 'Tasks', 'Events', 'Expenses', 'Cases'];
@@ -137,15 +137,16 @@ function buildWorkspace(wsId, label, sub) {
   const pick = name => readAll(name).filter(r => r.workspace_id === wsId);
   const cases = pick('Cases').map(c => {
     const entries = readAll('CaseEntries').filter(e => e.case_id === c.id)
-      .map(e => ({ date: e.date, what: e.what, ev: e.ev }));
+      .map(e => ({ date: String(e.date || ''), time: String(e.time || ''), what: e.what, ev: e.ev }));
     return { id: c.id, name: c.name, emoji: c.emoji, color: c.color, status: c.status, entries: entries };
   });
+  const isIsoDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
   return {
     label: label, sub: sub,
     projects: pick('Projects').map(p => ({ id: p.id, name: p.name, emoji: p.emoji, color: p.color })),
     tasks:    pick('Tasks').map(t => ({ id: t.id, title: t.title, project: t.project, assignee: t.assignee || undefined,
                                         due: t.due, pri: t.pri, status: t.status, email: t.email === true || t.email === 'TRUE' })),
-    events:   pick('Events').map(e => ({ id: e.id, day: Number(e.day), title: e.title, color: e.color })),
+    events:   pick('Events').filter(e => isIsoDate(e.date)).map(e => ({ id: e.id, date: String(e.date), title: e.title, color: e.color })),
     expenses: pick('Expenses').map(x => ({ id: x.id, title: x.title, project: x.project, amount: Number(x.amount),
                                            date: x.date, payer: x.payer || undefined })),
     cases:    cases,
@@ -173,13 +174,13 @@ function saveWorkspace(member, workspace, data) {
   (data.projects || []).forEach(p => rows.Projects.push({ workspace_id: wsId, id: p.id, name: p.name, emoji: p.emoji, color: p.color }));
   (data.tasks || []).forEach(t => rows.Tasks.push({ workspace_id: wsId, id: t.id, title: t.title, project: t.project,
       assignee: t.assignee || '', due: t.due, pri: t.pri, status: t.status, email: t.email ? true : false }));
-  (data.events || []).forEach(e => rows.Events.push({ workspace_id: wsId, id: e.id, day: e.day, title: e.title, color: e.color }));
+  (data.events || []).forEach(e => rows.Events.push({ workspace_id: wsId, id: e.id, date: e.date, title: e.title, color: e.color }));
   (data.expenses || []).forEach(x => rows.Expenses.push({ workspace_id: wsId, id: x.id, title: x.title, project: x.project,
       amount: x.amount, date: x.date, payer: x.payer || '' }));
   (data.cases || []).forEach(c => {
     rows.Cases.push({ workspace_id: wsId, id: c.id, name: c.name, emoji: c.emoji, color: c.color, status: c.status });
     (c.entries || []).forEach((en, i) => rows.CaseEntries.push({
-      case_id: c.id, entry_id: c.id + '-' + i, date: en.date, what: en.what, ev: en.ev }));
+      case_id: c.id, entry_id: c.id + '-' + i, date: en.date, time: en.time || '', what: en.what, ev: en.ev }));
   });
 
   // รวม: แถวของ workspace อื่น (คงไว้) + แถวใหม่ของ workspace นี้
@@ -241,23 +242,36 @@ function setup() {
   const def = book.getSheetByName('Sheet1');
   if (def && book.getSheets().length > 1) book.deleteSheet(def);
 
-  // ใส่เจ้าของคนเดียว — สมาชิกที่เหลือเชิญผ่านปุ่ม "เชิญ" ในแอปได้เลย
+  // ใส่เจ้าของคนเดียว — สมาชิกที่เหลือเชิญผ่านปุ่ม "เชิญ" ในแอปได้เลย · ไม่ seed ข้อมูลตัวอย่าง
   writeAll('Members', [
     { member_id: 'me', name: 'มาร์ท', email: 'nattawatnummit@gmail.com', role: 'เจ้าของ', perm: 'owner', color: '#D97757', av: 'ม' },
   ]);
-
-  // seed พื้นที่ครอบครัว (shared) เล็กน้อย ให้เปิดมาไม่ว่าง
-  writeAll('Projects', [
-    { workspace_id: 'shared', id: 'p1', name: 'รีโนเวทครัว', emoji: '🏠', color: '#E8998D' },
-    { workspace_id: 'shared', id: 'p2', name: 'ทริปญี่ปุ่น', emoji: '✈️', color: '#E8A0BF' },
-    { workspace_id: 'shared', id: 'p3', name: 'งานบ้าน',     emoji: '🧺', color: '#A3B18A' },
-  ]);
-  writeAll('Tasks', [
-    { workspace_id: 'shared', id: 21, title: 'ขอใบเสนอราคาช่างครัว 3 เจ้า', project: 'p1', assignee: 'me',   due: 'วันนี้',   pri: 'high', status: 'doing', email: false },
-    { workspace_id: 'shared', id: 22, title: 'จองตั๋วเครื่องบิน BKK–NRT',    project: 'p2', assignee: 'ploy', due: 'พรุ่งนี้', pri: 'high', status: 'todo',  email: false },
-  ]);
   SpreadsheetApp.flush();
-  Logger.log('setup เสร็จ — แก้อีเมลสมาชิกในแท็บ Members ให้ตรงบัญชี Google จริง');
+  Logger.log('setup เสร็จ — เริ่มต้นด้วยเจ้าของคนเดียว ไม่มีข้อมูลตัวอย่าง');
+}
+
+/* ============================================================
+ *  resetData() — ล้างข้อมูลตัวอย่าง/เดโมทั้งหมด แต่ "คงสมาชิกไว้"
+ *  รันครั้งเดียวจาก editor เพื่อให้เริ่มจากศูนย์แบบไม่มีของปลอม
+ *  (ไม่แตะแท็บ Members — benjama และเจ้าของยังอยู่ครบ)
+ * ============================================================ */
+function resetData() {
+  ['Projects', 'Tasks', 'Events', 'Expenses', 'Cases', 'CaseEntries'].forEach(name => writeAll(name, []));
+  SpreadsheetApp.flush();
+  Logger.log('resetData เสร็จ — ล้างข้อมูลทุกพื้นที่แล้ว สมาชิกยังอยู่ครบ');
+}
+
+/* ============================================================
+ *  fixHeaders() — เขียนหัวคอลัมน์แถวแรกให้ตรง SCHEMA ปัจจุบัน
+ *  (หลังเปลี่ยน Events: day→date และ CaseEntries: +time)
+ * ============================================================ */
+function fixHeaders() {
+  Object.keys(SCHEMA).forEach(name => {
+    const s = ss().getSheetByName(name);
+    if (s) s.getRange(1, 1, 1, SCHEMA[name].length).setValues([SCHEMA[name]]).setFontWeight('bold');
+  });
+  SpreadsheetApp.flush();
+  Logger.log('fixHeaders เสร็จ');
 }
 
 /* ---------- util ---------- */

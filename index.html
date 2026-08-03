@@ -311,82 +311,12 @@ let members=[
 const mem=id=>members.find(m=>m.id===id);
 
 /* ---------------- data per workspace ---------------- */
+// เริ่มต้นว่าง — หลังล็อกอิน applyBootstrap() จะแทนที่ด้วยข้อมูลจริงจาก Google Sheet
 let DATA={
-  personal:{
-    label:'พื้นที่ส่วนตัว', sub:'งานและบันทึกของมาร์ทคนเดียว',
-    projects:[
-      {id:'w',name:'งาน/ที่ปรึกษา',emoji:'💼',color:PAL.sky},
-      {id:'h',name:'สุขภาพ',       emoji:'🩺',color:PAL.sage},
-      {id:'l',name:'เรียนรู้',     emoji:'📚',color:PAL.lav},
-    ],
-    tasks:[
-      {id:11,title:'เขียนสรุปข้อเสนอลูกค้า A',project:'w',due:'วันนี้',pri:'high',status:'doing',email:true},
-      {id:12,title:'ตรวจสุขภาพประจำปี — จองคิว',project:'h',due:'ศุกร์นี้',pri:'mid',status:'todo',email:false},
-      {id:13,title:'อ่านหนังสือ 30 นาที',project:'l',due:'ทุกวัน',pri:'low',status:'todo',email:false},
-      {id:14,title:'ทำสไลด์ workshop',project:'w',due:'จันทร์',pri:'mid',status:'done',email:false},
-    ],
-    events:[
-      {day:23,title:'ประชุมลูกค้า A',color:PAL.sky},
-      {day:25,title:'หาหมอฟัน',color:PAL.sage},
-      {day:28,title:'ส่งข้อเสนอ',color:PAL.sky},
-    ],
-    cases:[
-      {id:'c-health',emoji:'🩺',color:PAL.sage,name:'อาการปวดหลังเรื้อรัง',status:'prog',
-        entries:[
-          {date:'5 ก.ค. 2026',what:'เริ่มปวดหลังล่างหลังยกของหนัก',ev:'📷 รูปท่าทาง'},
-          {date:'9 ก.ค. 2026',what:'พบแพทย์ — วินิจฉัยกล้ามเนื้ออักเสบ ให้ยา',ev:'📄 ใบรับรองแพทย์'},
-          {date:'16 ก.ค. 2026',what:'อาการดีขึ้น เริ่มกายภาพเบา ๆ',ev:''},
-        ]},
-    ],
-    expenses:[
-      {id:41,title:'ซื้อหนังสือ + คอร์สออนไลน์',project:'l',amount:1290,date:'6 ก.ค.'},
-      {id:42,title:'ค่าเดินทางไปพบลูกค้า',project:'w',amount:450,date:'12 ก.ค.'},
-      {id:43,title:'ยาและวิตามิน',project:'h',amount:680,date:'18 ก.ค.'},
-    ],
-  },
-  shared:{
-    label:'พื้นที่ครอบครัว', sub:'แชร์กับทุกคนในบ้าน · ล็อกอินด้วย Google',
-    projects:[
-      {id:'p1',name:'รีโนเวทครัว',   emoji:'🏠',color:PAL.coral},
-      {id:'p2',name:'ทริปญี่ปุ่น',   emoji:'✈️',color:PAL.rose},
-      {id:'p3',name:'งานบ้าน',       emoji:'🧺',color:PAL.sage},
-      {id:'p4',name:'การเงินบ้าน',   emoji:'💰',color:PAL.butter},
-    ],
-    tasks:[
-      {id:21,title:'ขอใบเสนอราคาช่างครัว 3 เจ้า',project:'p1',assignee:'me',  due:'วันนี้',  pri:'high',status:'doing',email:true},
-      {id:22,title:'จองตั๋วเครื่องบิน BKK–NRT',   project:'p2',assignee:'ploy',due:'พรุ่งนี้',pri:'high',status:'todo', email:false},
-      {id:23,title:'ซักผ้า + เก็บห้องนั่งเล่น',    project:'p3',assignee:'kao', due:'วันนี้',  pri:'low', status:'todo', email:false},
-      {id:24,title:'สรุปค่าใช้จ่ายเดือน ก.ค.',      project:'p4',assignee:'me',  due:'ศุกร์นี้',pri:'mid', status:'todo', email:true},
-      {id:25,title:'รดน้ำต้นไม้หน้าบ้าน',           project:'p3',assignee:'dad', due:'วันนี้',  pri:'low', status:'done', email:false},
-    ],
-    events:[
-      {day:23,title:'ช่างเข้าวัดครัว',color:PAL.coral},
-      {day:24,title:'ประชุมครอบครัว',color:PAL.sage},
-      {day:26,title:'ช่างโซลาร์เข้าซ่อม',color:PAL.butter},
-      {day:30,title:'เดดไลน์เลือกกระเบื้อง',color:PAL.coral},
-    ],
-    cases:[
-      {id:'c-solar',emoji:'☀️',color:PAL.butter,name:'ระบบ Solar Cell มีปัญหา',status:'open',
-        entries:[
-          {date:'1 ก.ค. 2026', what:'พบว่า Solar cell trip — ไฟบางส่วนในบ้านดับ รีเซ็ตแล้วกลับมาปกติ',ev:'📷 รูปตู้ควบคุม'},
-          {date:'2 ก.ค. 2026', what:'โทรแจ้งช่างผู้ติดตั้ง นัดเข้าตรวจวันที่ 5 ก.ค.',ev:'📞 บันทึกการโทร'},
-          {date:'5 ก.ค. 2026', what:'ช่างเข้าตรวจ พบ inverter ทำงานร้อนผิดปกติ ยังไม่เจอสาเหตุชัด',ev:'📄 ใบตรวจงาน'},
-          {date:'8 ก.ค. 2026', what:'ไฟทริปครั้งที่ 2 ช่วงบ่ายแดดจัด — เก็บภาพจอ error ไว้เป็นหลักฐาน',ev:'📷 รูป error code'},
-          {date:'10 ก.ค. 2026',what:'ส่งเรื่อง + รูปทั้งหมดให้บริษัทเคลมประกันการติดตั้ง',ev:'📧 อีเมลเคลม'},
-        ]},
-      {id:'c-water',emoji:'🚿',color:PAL.sky,name:'ปั๊มน้ำเสียงดัง',status:'closed',
-        entries:[
-          {date:'20 มิ.ย. 2026',what:'ปั๊มน้ำมีเสียงดังผิดปกติตอนกลางคืน',ev:''},
-          {date:'23 มิ.ย. 2026',what:'ช่างเปลี่ยนลูกปืน ปั๊มเงียบปกติแล้ว',ev:'📄 ใบเสร็จ 850 บ.'},
-        ]},
-    ],
-    expenses:[
-      {id:51,title:'มัดจำช่างครัว (งวดแรก)',project:'p1',amount:20000,date:'8 ก.ค.',payer:'me'},
-      {id:52,title:'ตั๋วเครื่องบิน BKK–NRT ×2',project:'p2',amount:18500,date:'14 ก.ค.',payer:'ploy'},
-      {id:53,title:'ของใช้ในบ้าน + ทำความสะอาด',project:'p3',amount:1250,date:'16 ก.ค.',payer:'dad'},
-      {id:54,title:'ค่าน้ำค่าไฟเดือน ก.ค.',project:'p4',amount:2380,date:'20 ก.ค.',payer:'me'},
-    ],
-  },
+  personal:{ label:'พื้นที่ส่วนตัว', sub:'งานและบันทึกของฉัน',
+    projects:[], tasks:[], events:[], cases:[], expenses:[] },
+  shared:{ label:'พื้นที่ครอบครัว', sub:'แชร์กับทุกคนในบ้าน · ล็อกอินด้วย Google',
+    projects:[], tasks:[], events:[], cases:[], expenses:[] },
 };
 
 /* ---------------- state ---------------- */
@@ -395,11 +325,37 @@ const D=()=>DATA[ws];
 const proj=id=>D().projects.find(p=>p.id===id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=s=>document.querySelector(s);
-function avatar(id,cls='mini-av'){const m=mem(id);return `<span class="${cls}" style="background:${m.color}" title="${esc(m.name)}">${esc(m.av)}</span>`;}
+function avatar(id,cls='mini-av'){const m=mem(id);if(!m)return '';return `<span class="${cls}" style="background:${m.color}" title="${esc(m.name)}">${esc(m.av)}</span>`;}
 function ptag(pid){const p=proj(pid);if(!p)return '';return `<span class="tag" style="background:${tint(p.color)};color:#6a5540">${p.emoji} ${esc(p.name)}</span>`;}
 const priLabel={high:'ด่วน',mid:'ปานกลาง',low:'ทั่วไป'};
 const statusLabel={open:'ยังไม่จบ',prog:'กำลังแก้',closed:'ปิดเคสแล้ว'};
 const baht=n=>Number(n).toLocaleString('en-US');
+
+/* ---------------- date + Google Calendar helpers ---------------- */
+const THMONTH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const pad2=n=>String(n).padStart(2,'0');
+const isoOf=(y,m,day)=>`${y}-${pad2(m+1)}-${pad2(day)}`;
+function todayISO(){const n=new Date();return isoOf(n.getFullYear(),n.getMonth(),n.getDate());}
+function isoToThai(s){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||''));if(!m)return String(s||'');return Number(m[3])+' '+THMONTH[Number(m[2])-1]+' '+(Number(m[1])+543);}
+// สร้างลิงก์ "เพิ่มลง Google Calendar" แบบ template (ผู้ใช้กดยืนยันเองในหน้า Google) — ไม่ต้องขอสิทธิ์พิเศษ
+function gcalUrl(title,iso,time){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));let dates='';
+  if(m){
+    const ymd=m[1]+m[2]+m[3];
+    if(time&&/^\d{2}:\d{2}$/.test(time)){
+      const st=ymd+'T'+time.replace(':','')+'00';
+      const hh=pad2((Number(time.slice(0,2))+1)%24);const en=ymd+'T'+hh+time.slice(3,5)+'00';dates=st+'/'+en;
+    }else{
+      const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3])+1);
+      dates=ymd+'/'+isoOf(d.getFullYear(),d.getMonth(),d.getDate()).replace(/-/g,'');
+    }
+  }
+  const base='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title||'');
+  return dates? base+'&dates='+dates : base;
+}
+/* calendar view state */
+const _cnow=new Date(); let calY=_cnow.getFullYear(), calM=_cnow.getMonth();
+let editingEventId=null, editingEntry=null;
 
 /* ---------------- chrome (subtabs) ---------------- */
 function renderChrome(){
@@ -421,7 +377,7 @@ function renderChrome(){
 }
 function fabAction(){
   if(tab==='task') openTaskModal();
-  else if(tab==='calendar') openEventModal();
+  else if(tab==='calendar') openDayModal(fabCalISO());
   else if(tab==='timeline') openCaseModal();
   else if(tab==='expenses') openExpenseModal();
 }
@@ -448,8 +404,12 @@ function taskRow(t){
     <div class="t-body"><div class="t-title">${esc(t.title)} ${t.email?'<span class="mail-badge">📧 จากอีเมล</span>':''}</div>
       <div class="t-meta">${ptag(t.project)}<span class="pri ${t.pri}">${priLabel[t.pri]}</span><span class="due">📅 ${esc(t.due)}</span></div></div>
     ${t.assignee?avatar(t.assignee):''}
+    <button class="del" onclick="editTask(${t.id})" title="แก้ไข">✏️</button>
+    <button class="del" onclick="deleteTask(${t.id})" title="ลบ">✕</button>
   </div>`;
 }
+function editTask(id){openTaskModal(id);}
+function deleteTask(id){if(!confirm('ลบงานนี้? การลบยกเลิกไม่ได้'))return;const d=D();d.tasks=d.tasks.filter(t=>t.id!==id);render();}
 function viewTasks(){
   const d=D();let list=d.tasks.slice();
   if(taskFilter==='today')list=list.filter(t=>t.due==='วันนี้');
@@ -470,63 +430,120 @@ function setFilter(v){taskFilter=v;render();}
 function toggleTask(id){const t=D().tasks.find(x=>x.id===id);t.status=t.status==='done'?'todo':'done';render();}
 
 /* ---- Calendar ---- */
+function calNav(delta){calM+=delta;if(calM<0){calM=11;calY--;}else if(calM>11){calM=0;calY++;}render();}
+function calToday(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();render();}
 function viewCalendar(){
-  const d=D();const dow=['อา','จ','อ','พ','พฤ','ศ','ส'];const firstDow=3,days=31;
-  let cells='';for(let i=0;i<firstDow;i++)cells+=`<div class="cell dim"></div>`;
+  const d=D();const dow=['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const first=new Date(calY,calM,1).getDay();
+  const days=new Date(calY,calM+1,0).getDate();
+  const t=new Date();const isThisMonth=t.getFullYear()===calY&&t.getMonth()===calM;
+  let cells='';for(let i=0;i<first;i++)cells+=`<div class="cell dim"></div>`;
   for(let day=1;day<=days;day++){
-    const evs=d.events.filter(e=>e.day===day);
-    cells+=`<div class="cell ${day===23?'today':''}"><div class="dn">${day}</div>${evs.map(e=>`<div class="ev" style="background:${tint(e.color)}">${esc(e.title)}</div>`).join('')}</div>`;
+    const iso=isoOf(calY,calM,day);
+    const evs=d.events.filter(e=>e.date===iso);
+    cells+=`<div class="cell ${isThisMonth&&day===t.getDate()?'today':''}" style="cursor:pointer" onclick="openDayModal('${iso}')">
+      <div class="dn">${day}</div>
+      ${evs.map(e=>`<div class="ev" style="background:${tint(e.color)}" title="${esc(e.title)}">${esc(e.title)}</div>`).join('')}</div>`;
   }
-  return pagehead('Calendar · '+d.label,'ซิงก์สองทางกับ Google Calendar','<button class="btn" onclick="openEventModal()">＋ สร้างนัด</button>')
-    +`<div class="banner">🔄 นัดที่สร้างในนี้จะถูกส่งขึ้น Google Calendar อัตโนมัติ (สองทาง)</div>`
+  const nav=`<div style="display:flex;gap:6px;align-items:center">
+      <button class="btn ghost sm" onclick="calNav(-1)">‹</button>
+      <div style="font-weight:800;min-width:118px;text-align:center">${THMONTH[calM]} ${calY+543}</div>
+      <button class="btn ghost sm" onclick="calNav(1)">›</button>
+      <button class="btn ghost sm" onclick="calToday()">วันนี้</button></div>`;
+  return pagehead('ปฏิทิน · '+d.label,'แตะที่วันเพื่อเพิ่มหรือดูนัด · เพิ่มลง Google Calendar ได้ทีละรายการ',nav)
     +`<div class="cal"><div class="cal-head">${dow.map(x=>`<div>${x}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
 }
-function openEventModal(){
-  const opts=D().projects.map(p=>`<option value="${p.id}">${p.emoji} ${esc(p.name)}</option>`).join('');
-  $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
-    <h3>＋ สร้างนัดในปฏิทิน</h3>
-    <label>ชื่อนัด</label><input class="field" id="evTitle" placeholder="เช่น พาน้องข้าวหาหมอฟัน">
-    <div class="row"><div style="flex:1"><label>วันที่ (ก.ค.)</label><input class="field" id="evDay" type="number" min="1" max="31" placeholder="27"></div>
-    <div style="flex:1"><label>หมวด</label><select class="field" id="evProj">${opts}</select></div></div>
-    <div class="checkline"><input type="checkbox" checked disabled> 🔄 ส่งขึ้น Google Calendar อัตโนมัติ</div>
-    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveEvent()">สร้างนัด</button></div>
+function fabCalISO(){const t=new Date();return (t.getFullYear()===calY&&t.getMonth()===calM)?todayISO():isoOf(calY,calM,1);}
+// modal รายวัน: แสดงนัดของวันนั้น + เพิ่ม/แก้ไข/ลบ + ปุ่มเพิ่มลง Google Calendar
+function openDayModal(iso){
+  const d=D();
+  const evs=d.events.filter(e=>e.date===iso);
+  const opts=d.projects.map(p=>`<option value="${p.id}">${p.emoji} ${esc(p.name)}</option>`).join('');
+  const editing=editingEventId?evs.find(e=>String(e.id)===String(editingEventId)):null;
+  const list=evs.length?evs.map(e=>`<div class="exp" style="padding:10px 0">
+      <div style="flex:1;min-width:0"><div class="et">${esc(e.title)}</div></div>
+      <a class="del" href="${gcalUrl(e.title,e.date)}" target="_blank" rel="noopener" title="เพิ่มลง Google Calendar" style="text-decoration:none;display:flex;align-items:center;justify-content:center">📅</a>
+      <button class="del" onclick="editEvent('${e.id}','${iso}')" title="แก้ไข">✏️</button>
+      <button class="del" onclick="deleteEvent('${e.id}','${iso}')" title="ลบ">✕</button>
+    </div>`).join(''):'<div style="color:var(--muted);padding:8px 0">ยังไม่มีนัดในวันนี้</div>';
+  $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this){editingEventId=null;closeModal();}"><div class="modal">
+    <h3>📅 ${isoToThai(iso)}</h3>
+    <div class="panel" style="box-shadow:none;padding:0 0 4px;border:none">${list}</div>
+    <div class="section-title" style="margin-top:14px">${editing?'✏️ แก้ไขนัด':'＋ เพิ่มนัดใหม่'}</div>
+    <label>ชื่อนัด</label><input class="field" id="evTitle" placeholder="เช่น พาน้องหาหมอฟัน" value="${editing?esc(editing.title):''}">
+    <div class="row"><div style="flex:1"><label>วันที่</label><input class="field" id="evDate" type="date" value="${iso}"></div>
+    <div style="flex:1"><label>หมวด (สี)</label><select class="field" id="evProj">${opts}</select></div></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="editingEventId=null;closeModal()">ปิด</button>
+      <button class="btn" onclick="saveEvent('${iso}')">${editing?'บันทึกการแก้ไข':'เพิ่มนัด'}</button></div>
   </div></div>`;
 }
-function saveEvent(){const t=$('#evTitle').value.trim();const day=parseInt($('#evDay').value,10);if(!t||!day)return;D().events.push({day,title:t,color:proj($('#evProj').value).color});closeModal();render();}
+function saveEvent(iso){
+  const t=$('#evTitle').value.trim();if(!t){$('#evTitle').focus();return;}
+  const dateVal=$('#evDate').value||iso;
+  const pid=$('#evProj').value;const color=proj(pid)?proj(pid).color:PAL.sky;
+  const d=D();
+  if(editingEventId){const ev=d.events.find(x=>String(x.id)===String(editingEventId));if(ev){ev.title=t;ev.date=dateVal;ev.color=color;}editingEventId=null;}
+  else{d.events.push({id:Date.now(),date:dateVal,title:t,color:color});}
+  render();openDayModal(dateVal);
+}
+function editEvent(id,iso){editingEventId=id;openDayModal(iso);}
+function deleteEvent(id,iso){if(!confirm('ลบนัดนี้?'))return;const d=D();d.events=d.events.filter(e=>String(e.id)!==String(id));editingEventId=null;render();openDayModal(iso);}
 
 /* ---- Timeline (cases) ---- */
 function viewTimeline(){
   const d=D();
   return pagehead('Timeline · '+d.label,'บันทึกเหตุการณ์เป็น “เคส” เรียงตามวัน เก็บเป็นหลักฐาน','<button class="btn" onclick="openCaseModal()">＋ เปิดเคสใหม่</button>')
     +`<div class="banner">🗂️ ฟีเจอร์เด่น: รวบรวมเหตุการณ์ทีละวันของเรื่องเดียว (เช่น ปัญหา Solar Cell) ให้เป็นไทม์ไลน์หลักฐานที่ย้อนดูได้</div>`
-    +d.cases.map(c=>{
-      const last=c.entries[c.entries.length-1];
+    +(d.cases.length?d.cases.map(c=>{
+      const s=entriesSorted(c);const first=s[0],last=s[s.length-1];
       return `<div class="case" onclick="openCase('${c.id}')">
         <div class="case-top"><div class="cemoji" style="background:${tint(c.color)}">${c.emoji}</div>
-          <div style="flex:1"><div class="cname">${esc(c.name)}</div><div class="cmeta">${c.entries.length} เหตุการณ์ · ล่าสุด ${esc(last.date)}</div></div>
+          <div style="flex:1"><div class="cname">${esc(c.name)}</div><div class="cmeta">${c.entries.length} เหตุการณ์${last?' · ล่าสุด '+esc(entryDate(last)):''}</div></div>
           <span class="status ${c.status}">${statusLabel[c.status]}</span></div>
-        <div class="case-foot">🕑 ${esc(c.entries[0].date)} → ${esc(last.date)} · แตะเพื่อดูไทม์ไลน์ทั้งหมด →</div>
+        ${first&&last?`<div class="case-foot">🕑 ${esc(entryDate(first))} → ${esc(entryDate(last))} · แตะเพื่อดูไทม์ไลน์ทั้งหมด →</div>`:'<div class="case-foot">แตะเพื่อดูไทม์ไลน์ →</div>'}
       </div>`;
-    }).join('');
+    }).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">ยังไม่มีเคส — กด “＋ เปิดเคสใหม่”</div>');
 }
+// เรียงเหตุการณ์ตามวันที่+เวลา (คงลำดับเดิมของรายการที่ไม่มีวันที่)
+function entriesSorted(c){return (c.entries||[]).map((e,i)=>({e,i})).sort((a,b)=>(String(a.e.date||'')+(a.e.time||'')).localeCompare(String(b.e.date||'')+(b.e.time||''))).map(x=>x.e);}
+function entryDate(e){return isoToThai(e.date)+(e.time?' '+e.time:'');}
 function openCase(id){caseOpen=id;render();window.scrollTo(0,0);}
 function viewCaseDetail(id){
   const c=D().cases.find(x=>x.id===id);
   const styles=['','pastel-sage','pastel-sky'];
+  const ed=(editingEntry&&editingEntry.caseId===id)?c.entries[editingEntry.idx]:null;
+  const sorted=c.entries.map((e,i)=>({e,i})).sort((a,b)=>(String(a.e.date||'')+(a.e.time||'')).localeCompare(String(b.e.date||'')+(b.e.time||'')));
   return `<div class="pagehead"><button class="btn ghost sm" onclick="closeCase()">← กลับ</button>
       <div style="margin-left:6px"><h1>${c.emoji} ${esc(c.name)}</h1><div class="sub">${c.entries.length} เหตุการณ์ · สถานะ: ${statusLabel[c.status]}</div></div>
       <div style="flex:1"></div><span class="status ${c.status}" style="align-self:center">${statusLabel[c.status]}</span></div>`
     +`<div class="panel">
-        <div class="addrow"><input id="ceDate" placeholder="วันที่ (เช่น 12 ก.ค. 2026)" style="max-width:190px"><input id="ceWhat" placeholder="เกิดอะไรขึ้น…"><button class="btn sm" onclick="addEntry('${id}')">＋ บันทึก</button></div>
-        <div class="tl">${c.entries.map((e,i)=>`<div class="tl-item ${styles[i%3]}">
-          <div class="tl-date">${esc(e.date)}</div>
+        <div class="section-title" style="margin-top:0">${ed?'✏️ แก้ไขเหตุการณ์':'＋ เพิ่มเหตุการณ์'}</div>
+        <div class="row" style="margin-bottom:10px">
+          <div style="flex:1"><label style="display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px">วันที่</label><input class="field" id="ceDate" type="date" value="${ed?esc(ed.date||''):todayISO()}"></div>
+          <div style="flex:1"><label style="display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px">เวลา</label><input class="field" id="ceTime" type="time" value="${ed?esc(ed.time||''):''}"></div>
+        </div>
+        <div class="addrow"><input class="field" id="ceWhat" placeholder="เกิดอะไรขึ้น…" value="${ed?esc(ed.what):''}"><button class="btn sm" onclick="addEntry('${id}')">${ed?'บันทึก':'＋ เพิ่ม'}</button>${ed?`<button class="btn ghost sm" onclick="cancelEntry()">ยกเลิก</button>`:''}</div>
+        <div class="tl">${sorted.map((o,k)=>{const e=o.e;return `<div class="tl-item ${styles[k%3]}">
+          <div class="tl-date">${esc(entryDate(e))}</div>
           <div class="tl-what">${esc(e.what)}</div>
           ${e.ev?`<span class="tl-ev">${esc(e.ev)}</span>`:''}
-        </div>`).join('')}</div>
+          <div style="margin-top:7px;display:flex;gap:6px">
+            <button class="btn ghost sm" onclick="editEntry('${id}',${o.i})">✏️ แก้ไข</button>
+            <button class="btn ghost sm" onclick="deleteEntry('${id}',${o.i})">✕ ลบ</button></div>
+        </div>`;}).join('')||'<div style="color:var(--muted);padding:8px 0">ยังไม่มีเหตุการณ์</div>'}</div>
       </div>`;
 }
-function closeCase(){caseOpen=null;render();}
-function addEntry(id){const c=D().cases.find(x=>x.id===id);const dt=$('#ceDate').value.trim();const w=$('#ceWhat').value.trim();if(!w)return;c.entries.push({date:dt||'วันนี้',what:w,ev:''});render();}
+function closeCase(){caseOpen=null;editingEntry=null;render();}
+function addEntry(id){
+  const c=D().cases.find(x=>x.id===id);const dt=$('#ceDate').value;const tm=$('#ceTime').value;const w=$('#ceWhat').value.trim();if(!w){$('#ceWhat').focus();return;}
+  if(editingEntry&&editingEntry.caseId===id){const e=c.entries[editingEntry.idx];if(e){e.date=dt||todayISO();e.time=tm||'';e.what=w;}editingEntry=null;}
+  else{c.entries.push({date:dt||todayISO(),time:tm||'',what:w,ev:''});}
+  render();
+}
+function editEntry(id,idx){editingEntry={caseId:id,idx:idx};render();window.scrollTo(0,0);}
+function cancelEntry(){editingEntry=null;render();}
+function deleteEntry(id,idx){if(!confirm('ลบเหตุการณ์นี้? การลบยกเลิกไม่ได้'))return;const c=D().cases.find(x=>x.id===id);c.entries.splice(idx,1);if(editingEntry&&editingEntry.caseId===id)editingEntry=null;render();}
 function openCaseModal(){
   $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
     <h3>＋ เปิดเคสใหม่</h3>
@@ -536,7 +553,7 @@ function openCaseModal(){
   </div></div>`;
 }
 function saveCase(){const n=$('#csName').value.trim();if(!n)return;const first=$('#csFirst').value.trim();
-  D().cases.unshift({id:'c'+Date.now(),emoji:'📌',color:PAL.lav,name:n,status:'open',entries:[{date:'วันนี้',what:first||'เปิดเคส',ev:''}]});closeModal();render();}
+  D().cases.unshift({id:'c'+Date.now(),emoji:'📌',color:PAL.lav,name:n,status:'open',entries:[{date:todayISO(),time:'',what:first||'เปิดเคส',ev:''}]});closeModal();render();}
 
 /* ---- Share ---- */
 function viewShare(){
@@ -634,9 +651,8 @@ function viewSettings(){
           <label style="display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px">ชื่อที่แสดง</label>
           <div class="addrow" style="margin-bottom:0"><input class="field" id="stName" value="${esc(me.name)}"><button class="btn sm" onclick="renameUser()">บันทึก</button></div>
         </div>
-        <div class="panel" style="margin-top:18px"><h3>🔗 การเชื่อมต่อ</h3>
-          <div class="conn-card"><div class="ci">📅</div><div><div class="ct">Google Calendar</div><div class="cs">ซิงก์นัดหมายสองทาง</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
-          <div class="conn-card"><div class="ci">📧</div><div><div class="ct">Gmail</div><div class="cs">ติดดาวอีเมล → สร้างงาน</div></div><span class="pill-ok">เชื่อมแล้ว</span></div>
+        <div class="panel" style="margin-top:18px"><h3>📅 Google Calendar</h3>
+          <div class="cs" style="color:var(--muted);font-size:12.5px">ในหน้า “ปฏิทิน” แตะที่วัน แล้วกดปุ่ม 📅 ข้างนัด เพื่อเพิ่มนัดนั้นลง Google Calendar ของคุณ (เปิดหน้า Google ให้กดยืนยันเอง)</div>
         </div>
         <div class="panel" style="margin-top:18px"><h3>💾 ข้อมูล & บัญชี</h3>
           <div class="cs" style="color:var(--muted);font-size:12.5px;margin-bottom:10px">${ONLINE?'ซิงก์อัตโนมัติกับ Google Sheet · แคชในเครื่องไว้ใช้ออฟไลน์':'ยังไม่ได้ล็อกอิน — กำลังแสดงข้อมูลแคช'}</div>
@@ -675,27 +691,35 @@ function deleteProject(id){
 }
 
 /* ---- Task modal ---- */
-function openTaskModal(){
+function openTaskModal(editId){
   const d=D();
-  const opts=d.projects.map(p=>`<option value="${p.id}">${p.emoji} ${esc(p.name)}</option>`).join('');
-  const mopts=members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  const t=editId?d.tasks.find(x=>x.id===editId):null;
+  const opts=d.projects.map(p=>`<option value="${p.id}" ${t&&t.project===p.id?'selected':''}>${p.emoji} ${esc(p.name)}</option>`).join('');
+  const mopts=members.map(m=>`<option value="${m.id}" ${t&&t.assignee===m.id?'selected':''}>${esc(m.name)}</option>`).join('');
   const assignField= ws==='shared'?`<div style="flex:1"><label>มอบให้</label><select class="field" id="ntAssign">${mopts}</select></div>`:'';
+  const pri=t?t.pri:'mid';
+  const priOpt=(v,l)=>`<option value="${v}" ${pri===v?'selected':''}>${l}</option>`;
   $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
-    <h3>＋ เพิ่มงานใหม่</h3>
-    <label>ชื่องาน</label><input class="field" id="ntTitle" placeholder="เช่น จองร้านอาหารวันอาทิตย์">
+    <h3>${t?'✏️ แก้ไขงาน':'＋ เพิ่มงานใหม่'}</h3>
+    <label>ชื่องาน</label><input class="field" id="ntTitle" placeholder="เช่น จองร้านอาหารวันอาทิตย์" value="${t?esc(t.title):''}">
     <div class="row"><div style="flex:1"><label>หมวด</label><select class="field" id="ntProj">${opts}</select></div>${assignField}</div>
-    <div class="row"><div style="flex:1"><label>กำหนดส่ง</label><input class="field" id="ntDue" placeholder="วันนี้ / 30 ก.ค."></div>
-    <div style="flex:1"><label>ความสำคัญ</label><select class="field" id="ntPri"><option value="mid">ปานกลาง</option><option value="high">ด่วน</option><option value="low">ทั่วไป</option></select></div></div>
-    <div class="checkline"><input type="checkbox" id="ntCal" checked> 📅 เพิ่มลง Google Calendar ด้วย (สองทาง)</div>
-    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveTask()">บันทึกงาน</button></div>
+    <div class="row"><div style="flex:1"><label>กำหนดส่ง</label><input class="field" id="ntDue" placeholder="วันนี้ / 30 ก.ค." value="${t?esc(t.due):''}"></div>
+    <div style="flex:1"><label>ความสำคัญ</label><select class="field" id="ntPri">${priOpt('mid','ปานกลาง')}${priOpt('high','ด่วน')}${priOpt('low','ทั่วไป')}</select></div></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveTask(${editId||''})">${t?'บันทึกการแก้ไข':'บันทึกงาน'}</button></div>
   </div></div>`;
 }
-function saveTask(){
+function saveTask(editId){
   const title=$('#ntTitle').value.trim();if(!title){$('#ntTitle').focus();return;}
-  const t={id:Date.now(),title,project:$('#ntProj').value,due:$('#ntDue').value.trim()||'ไม่ระบุ',pri:$('#ntPri').value,status:'todo',email:false};
-  if(ws==='shared'&&$('#ntAssign'))t.assignee=$('#ntAssign').value;
-  D().tasks.unshift(t);
-  if($('#ntCal').checked){D().events.push({day:23,title,color:proj(t.project).color});}
+  const d=D();
+  if(editId){
+    const t=d.tasks.find(x=>x.id===editId);
+    if(t){t.title=title;t.project=$('#ntProj').value;t.due=$('#ntDue').value.trim()||'ไม่ระบุ';t.pri=$('#ntPri').value;
+      if(ws==='shared'&&$('#ntAssign'))t.assignee=$('#ntAssign').value;}
+  }else{
+    const t={id:Date.now(),title,project:$('#ntProj').value,due:$('#ntDue').value.trim()||'ไม่ระบุ',pri:$('#ntPri').value,status:'todo',email:false};
+    if(ws==='shared'&&$('#ntAssign'))t.assignee=$('#ntAssign').value;
+    d.tasks.unshift(t);
+  }
   closeModal();render();
 }
 function closeModal(){$('#modalRoot').innerHTML='';}
