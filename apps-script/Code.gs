@@ -165,6 +165,20 @@ function saveWorkspace(member, workspace, data) {
     return { error: 'forbidden', reason: 'view-only ไม่มีสิทธิ์แก้พื้นที่ครอบครัว' };
   }
 
+  // ►► ล็อกกันการเซฟซ้อนกัน (race condition):
+  // การเซฟคือ อ่านทั้งหมด→แก้→เขียนทับทั้งหมด ถ้า personal กับ shared เซฟพร้อมกัน
+  // ตัวที่เขียนทีหลังจะใช้ข้อมูลอีก workspace ที่อ่านไว้ก่อนหน้า แล้วทับของใหม่หาย
+  // LockService บังคับให้ทำทีละคำสั่ง แต่ละครั้งอ่านข้อมูลล่าสุดเสมอ → ไม่ทับกัน
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(25000); } catch (e) { return { error: 'busy', message: 'ระบบกำลังบันทึกคำสั่งอื่น ลองใหม่' }; }
+  try {
+    return saveWorkspaceLocked(wsId, data);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function saveWorkspaceLocked(wsId, data) {
   // อ่านของ workspace อื่นไว้ (เพื่อไม่ให้ writeAll ทับข้าม workspace)
   const keep = {};
   WS_ENTITIES.concat(['CaseEntries']).forEach(name => { keep[name] = readAll(name); });
@@ -192,7 +206,7 @@ function saveWorkspace(member, workspace, data) {
   const otherEntries = keep.CaseEntries.filter(e => !belongsToWs(e.case_id, keep.Cases, wsId) && caseIds.indexOf(e.case_id) < 0);
   writeAll('CaseEntries', otherEntries.concat(rows.CaseEntries));
 
-  return { ok: true, workspace: workspace, saved: Date.now() };
+  return { ok: true, workspace: (wsId === 'shared' ? 'shared' : 'personal'), saved: Date.now() };
 }
 
 function belongsToWs(caseId, allCases, wsId) {
