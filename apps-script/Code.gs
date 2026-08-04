@@ -80,6 +80,32 @@ function sheet(name) {
   return s;
 }
 
+/* ---------- date/time normalize (กัน Google Sheets แปลง "2026-08-04" เป็นชนิดวันที่) ----------
+ * ปัญหา: เมื่อเซลล์ถูกเก็บเป็นชนิด "วันที่" ตอนอ่านกลับด้วย getValues() จะได้ Date object
+ * พอแปลงเป็น JSON กลายเป็น "2026-08-03T17:00:00.000Z" (เลื่อนตาม timezone) →
+ * ทำให้ตัวกรอง isIsoDate ตกงาน (นัดหายจากปฏิทิน) และงานโชว์วันที่เป็นข้อความยาว ๆ
+ * ทางแก้: อ่านมาแล้วบังคับให้เป็นข้อความ "yyyy-MM-dd" (หรือ "HH:mm" ถ้าเป็นเวลาล้วน) เสมอ */
+let _TZ = null;
+function scriptTz() { if (!_TZ) { try { _TZ = ss().getSpreadsheetTimeZone(); } catch (e) { _TZ = 'Asia/Bangkok'; } } return _TZ; }
+function cellToStr(v) {
+  if (!(v instanceof Date)) return v;
+  // ค่าเวลาล้วนใน Sheets เก็บฐานปี 1899 (1899-12-30) → คืนเป็น HH:mm, นอกนั้นเป็นวันที่
+  if (v.getFullYear() <= 1900) return Utilities.formatDate(v, scriptTz(), 'HH:mm');
+  return Utilities.formatDate(v, scriptTz(), 'yyyy-MM-dd');
+}
+// แปลงค่าใด ๆ ให้เป็นวันที่ "yyyy-MM-dd" (รองรับทั้ง Date object และข้อความ ISO ที่ค้างมาก่อน)
+function toIsoDate(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, scriptTz(), 'yyyy-MM-dd');
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;                 // สะอาดอยู่แล้ว
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {                         // ข้อความ ISO datetime → แปลงตาม timezone
+    const d = new Date(s); if (!isNaN(d.getTime())) return Utilities.formatDate(d, scriptTz(), 'yyyy-MM-dd');
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  return m ? (m[1] + '-' + m[2] + '-' + m[3]) : s;
+}
+
 // อ่านทั้งแท็บเป็น array ของ object ตาม SCHEMA
 function readAll(name) {
   const cols = SCHEMA[name];
@@ -89,7 +115,7 @@ function readAll(name) {
     const row = values[r];
     if (row.every(c => c === '' || c === null)) continue;
     const o = {};
-    cols.forEach((c, i) => { o[c] = row[i]; });
+    cols.forEach((c, i) => { o[c] = cellToStr(row[i]); });   // บังคับ Date → ข้อความ กันเลื่อนวัน/นัดหาย
     out.push(o);
   }
   return out;
@@ -103,7 +129,9 @@ function writeAll(name, objs) {
   if (last > 1) s.getRange(2, 1, last - 1, cols.length).clearContent();
   if (objs.length) {
     const rows = objs.map(o => cols.map(c => (o[c] === undefined || o[c] === null) ? '' : o[c]));
-    s.getRange(2, 1, rows.length, cols.length).setValues(rows);
+    const range = s.getRange(2, 1, rows.length, cols.length);
+    range.setNumberFormat('@');   // บังคับทุกเซลล์เป็น "ข้อความ" ก่อนเขียน กัน Sheets แปลง "2026-08-04" เป็นชนิดวันที่
+    range.setValues(rows);
   }
 }
 
@@ -137,18 +165,19 @@ function buildWorkspace(wsId, label, sub) {
   const pick = name => readAll(name).filter(r => r.workspace_id === wsId);
   const cases = pick('Cases').map(c => {
     const entries = readAll('CaseEntries').filter(e => e.case_id === c.id)
-      .map(e => ({ date: String(e.date || ''), time: String(e.time || ''), what: e.what, ev: e.ev }));
+      .map(e => ({ date: toIsoDate(e.date), time: String(e.time || ''), what: e.what, ev: e.ev }));
     return { id: c.id, name: c.name, emoji: c.emoji, color: c.color, status: c.status, entries: entries };
   });
   const isIsoDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+  const isTrue = v => v === true || String(v || '').toUpperCase() === 'TRUE';
   return {
     label: label, sub: sub,
     projects: pick('Projects').map(p => ({ id: p.id, name: p.name, emoji: p.emoji, color: p.color })),
     tasks:    pick('Tasks').map(t => ({ id: t.id, title: t.title, project: t.project, assignee: t.assignee || undefined,
-                                        due: t.due, time: String(t.time || ''), pri: t.pri, status: t.status, email: t.email === true || t.email === 'TRUE' })),
-    events:   pick('Events').filter(e => isIsoDate(e.date)).map(e => ({ id: e.id, date: String(e.date), allDay: e.allday === true || e.allday === 'TRUE', start: String(e.start || ''), end: String(e.end || ''), title: e.title, color: e.color })),
+                                        due: toIsoDate(t.due), time: String(t.time || ''), pri: t.pri, status: t.status, email: isTrue(t.email) })),
+    events:   pick('Events').map(e => ({ id: e.id, date: toIsoDate(e.date), allDay: isTrue(e.allday), start: String(e.start || ''), end: String(e.end || ''), title: e.title, color: e.color })).filter(e => isIsoDate(e.date)),
     expenses: pick('Expenses').map(x => ({ id: x.id, title: x.title, project: x.project, amount: Number(x.amount),
-                                           date: x.date, payer: x.payer || undefined })),
+                                           date: toIsoDate(x.date), payer: x.payer || undefined })),
     cases:    cases,
   };
 }

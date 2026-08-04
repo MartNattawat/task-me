@@ -127,6 +127,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .stat .k{font-size:12.5px;color:var(--muted);font-weight:700;}
 .stat .v{font-size:28px;font-weight:800;margin-top:6px;}
 .stat .v small{font-size:13px;color:var(--muted);font-weight:600;}
+/* slim single-line stat bar */
+.statbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.ministat{flex:1;min-width:90px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 14px;box-shadow:var(--shadow);}
+.ministat .mk{font-size:12.5px;color:var(--muted);font-weight:700;}
+.ministat .mv{font-size:20px;font-weight:800;}
+/* task search + drag */
+.tsearch{width:100%;margin-bottom:14px;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;background:var(--panel);color:var(--ink);outline:none;}
+.tsearch:focus{border-color:var(--clay);box-shadow:0 0 0 3px var(--clay-soft);}
+.task{touch-action:pan-y;}
+.task.dragging{opacity:.55;background:var(--bg2);border-radius:12px;box-shadow:var(--shadow);}
+.drag-handle{flex:none;color:#C9C2B4;font-size:16px;cursor:grab;padding:0 2px;touch-action:none;user-select:none;}
 
 /* kanban */
 .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
@@ -408,7 +419,7 @@ function render(){
   const m=$('#main');
   if(tab==='share'){m.innerHTML=viewShare();return;}
   if(tab==='settings'){m.innerHTML=viewSettings();return;}
-  if(tab==='task') m.innerHTML=viewTasks();
+  if(tab==='task'){m.innerHTML=viewTasks();enableTaskDrag();}
   else if(tab==='calendar') m.innerHTML=viewCalendar();
   else if(tab==='timeline') m.innerHTML= caseOpen? viewCaseDetail(caseOpen): viewTimeline();
   else if(tab==='expenses') m.innerHTML=viewExpenses();
@@ -417,16 +428,67 @@ function pagehead(title,sub,actions=''){return `<div class="pagehead"><div><h1>$
 
 /* ---- Tasks ---- */
 let taskFilter='all';
+let taskSearch='';
 function isISO(s){return /^\d{4}-\d{2}-\d{2}$/.test(String(s||''));}
+/* long-press drag to reorder tasks */
+let _dragEl=null,_dragTimer=null,_dragging=false;
+function enableTaskDrag(){
+  const cont=document.getElementById('taskList');
+  if(!cont)return;
+  cont.querySelectorAll('.task').forEach(el=>{
+    const handle=el.querySelector('.drag-handle')||el;
+    const start=e=>{
+      if(e.target.closest('button,a')&&!e.target.closest('.drag-handle'))return;
+      _dragTimer=setTimeout(()=>{
+        _dragging=true;_dragEl=el;el.classList.add('dragging');
+        try{el.setPointerCapture(e.pointerId);}catch(_){}
+      },300);
+    };
+    handle.addEventListener('pointerdown',start);
+    el.addEventListener('pointermove',e=>{
+      if(!_dragging||!_dragEl)return;
+      e.preventDefault();
+      const after=_dragAfter(cont,e.clientY);
+      if(after==null)cont.appendChild(_dragEl);
+      else if(after!==_dragEl)cont.insertBefore(_dragEl,after);
+    });
+    const end=()=>{
+      clearTimeout(_dragTimer);
+      if(_dragging){_dragging=false;if(_dragEl)_dragEl.classList.remove('dragging');_dragEl=null;commitTaskOrder();}
+    };
+    el.addEventListener('pointerup',end);
+    el.addEventListener('pointercancel',end);
+  });
+}
+function _dragAfter(cont,y){
+  const els=[...cont.querySelectorAll('.task:not(.dragging)')];
+  let best=null,bestOff=-Infinity;
+  els.forEach(child=>{
+    const box=child.getBoundingClientRect();
+    const off=y-box.top-box.height/2;
+    if(off<0&&off>bestOff){bestOff=off;best=child;}
+  });
+  return best;
+}
+function commitTaskOrder(){
+  const cont=document.getElementById('taskList');if(!cont)return;
+  const ids=[...cont.querySelectorAll('.task')].map(el=>Number(el.dataset.id));
+  if(!ids.length)return;
+  const d=D();const vis=new Set(ids);let vi=0;
+  d.tasks=d.tasks.map(t=>vis.has(t.id)?d.tasks.find(x=>x.id===ids[vi++]):t);
+  render();
+}
 function dueText(t){return isISO(t.due)?isoToThai(t.due)+(t.time?' '+esc(t.time):''):esc(t.due||'ไม่ระบุ');}
 function taskRow(t){
   const done=t.status==='done';
   const gc=isISO(t.due)?`<a class="gcal-link" href="${gcalUrl(t.title,t.due,t.time)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="เพิ่มลงปฏิทิน Google">📅 Google</a>`:'';
-  return `<div class="task ${done?'done':''}">
+  return `<div class="task ${done?'done':''}" data-id="${t.id}">
+    <span class="drag-handle" title="กดค้างเพื่อลากจัดลำดับ">⋮⋮</span>
     <button class="check" onclick="toggleTask(${t.id})">${done?'✓':''}</button>
     <div class="t-body"><div class="t-title">${esc(t.title)} ${t.email?'<span class="mail-badge">📧 จากอีเมล</span>':''}</div>
       <div class="t-meta">${ptag(t.project)}<span class="pri ${t.pri}">${priLabel[t.pri]}</span><span class="due">📅 ${dueText(t)}</span>${gc}</div></div>
     ${t.assignee?avatar(t.assignee):''}
+    ${done?`<button class="del" onclick="toggleTask(${t.id})" title="เรียกคืน">↩️</button>`:''}
     <button class="del" onclick="editTask(${t.id})" title="แก้ไข">✏️</button>
     <button class="del" onclick="deleteTask(${t.id})" title="ลบ">✕</button>
   </div>`;
@@ -434,30 +496,60 @@ function taskRow(t){
 function editTask(id){openTaskModal(id);}
 function deleteTask(id){if(!confirm('ลบงานนี้? การลบยกเลิกไม่ได้'))return;const d=D();d.tasks=d.tasks.filter(t=>t.id!==id);render();}
 function viewTasks(){
-  const d=D();let list=d.tasks.slice();
-  if(taskFilter==='today')list=list.filter(t=>t.due===todayISO()||t.due==='วันนี้');
-  else if(taskFilter!=='all')list=list.filter(t=>t.project===taskFilter);
+  const d=D();
+  const active=d.tasks.filter(t=>t.status!=='done');
+  const doneList=d.tasks.filter(t=>t.status==='done');
+  const doneCount=doneList.length;
+  const urgent=active.filter(t=>t.pri==='high').length;
+  const showingDone=taskFilter==='done';
+  let list;
+  if(showingDone){list=doneList.slice();}
+  else{
+    list=active.slice();
+    if(taskFilter==='today')list=list.filter(t=>t.due===todayISO()||t.due==='วันนี้');
+    else if(taskFilter!=='all')list=list.filter(t=>t.project===taskFilter);
+  }
+  const q=(taskSearch||'').trim().toLowerCase();
+  if(q)list=list.filter(t=>String(t.title||'').toLowerCase().includes(q));
   const chip=(v,l)=>`<button class="chip ${taskFilter===v?'on':''}" onclick="setFilter('${v}')">${l}</button>`;
-  const doing=d.tasks.filter(t=>t.status==='doing').length, done=d.tasks.filter(t=>t.status==='done').length;
+  const empty=showingDone?'ยังไม่มีงานที่เสร็จ ✨':(q?'ไม่พบงานที่ค้นหา 🔍':'ไม่มีงานในหมวดนี้ 🎉');
   return pagehead('Task · '+d.label,'จัดการงานและติดตามสถานะ','<button class="btn" onclick="openTaskModal()">＋ เพิ่มงาน</button>')
-    +`<div class="cards" style="margin-bottom:18px">
-        <div class="stat"><div class="blob" style="background:${PAL.coral}"></div><div class="k">งานทั้งหมด</div><div class="v">${d.tasks.length}</div></div>
-        <div class="stat"><div class="blob" style="background:${PAL.sky}"></div><div class="k">กำลังทำ</div><div class="v">${doing}</div></div>
-        <div class="stat"><div class="blob" style="background:${PAL.sage}"></div><div class="k">เสร็จแล้ว</div><div class="v">${done}</div></div>
-        <div class="stat"><div class="blob" style="background:${PAL.butter}"></div><div class="k">โปรเจกต์</div><div class="v">${d.projects.length}</div></div>
+    +`<div class="statbar">
+        <div class="ministat"><span class="mk">งานทั้งหมด</span><span class="mv">${active.length}</span></div>
+        <div class="ministat"><span class="mk">งานด่วน</span><span class="mv" style="color:#E5484D">${urgent}</span></div>
+        <div class="ministat"><span class="mk">เสร็จแล้ว</span><span class="mv" style="color:#2F9E44">${doneCount}</span></div>
       </div>`
-    +`<div class="chips">${chip('all','ทั้งหมด')}${chip('today','วันนี้')}${d.projects.map(p=>chip(p.id,p.emoji+' '+p.name)).join('')}</div>`
-    +`<div class="panel">${list.length?list.map(taskRow).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">ไม่มีงานในหมวดนี้ 🎉</div>'}</div>`;
+    +`<input class="tsearch" id="taskSearch" placeholder="🔍 ค้นหาชื่องาน…" value="${esc(taskSearch||'')}" oninput="onTaskSearch(this.value)">`
+    +`<div class="chips">${chip('all','ทั้งหมด')}${chip('today','วันนี้')}${d.projects.map(p=>chip(p.id,p.emoji+' '+p.name)).join('')}${chip('done','✓ เสร็จแล้ว ('+doneCount+')')}</div>`
+    +`<div class="panel" id="taskList">${list.length?list.map(taskRow).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">'+empty+'</div>'}</div>`;
 }
 function setFilter(v){taskFilter=v;render();}
+function onTaskSearch(v){
+  taskSearch=v;
+  const d=D();
+  const active=d.tasks.filter(t=>t.status!=='done');
+  const doneList=d.tasks.filter(t=>t.status==='done');
+  let list=taskFilter==='done'?doneList.slice():active.slice();
+  if(taskFilter!=='done'){
+    if(taskFilter==='today')list=list.filter(t=>t.due===todayISO()||t.due==='วันนี้');
+    else if(taskFilter!=='all')list=list.filter(t=>t.project===taskFilter);
+  }
+  const q=v.trim().toLowerCase();
+  if(q)list=list.filter(t=>String(t.title||'').toLowerCase().includes(q));
+  const cont=document.getElementById('taskList');
+  if(cont){
+    cont.innerHTML=list.length?list.map(taskRow).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">'+(q?'ไม่พบงานที่ค้นหา 🔍':'ไม่มีงาน')+'</div>';
+    enableTaskDrag();
+  }
+}
 function toggleTask(id){const t=D().tasks.find(x=>x.id===id);t.status=t.status==='done'?'todo':'done';render();}
 
 /* ---- Calendar ---- */
 function calNav(delta){calM+=delta;if(calM<0){calM=11;calY--;}else if(calM>11){calM=0;calY++;}render();}
 function calToday(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();render();}
 function viewCalendar(){
-  const d=D();const dow=['อา','จ','อ','พ','พฤ','ศ','ส'];
-  const first=new Date(calY,calM,1).getDay();
+  const d=D();const dow=['จ','อ','พ','พฤ','ศ','ส','อา'];
+  const first=(new Date(calY,calM,1).getDay()+6)%7;
   const days=new Date(calY,calM+1,0).getDate();
   const t=new Date();const isThisMonth=t.getFullYear()===calY&&t.getMonth()===calM;
   let cells='';for(let i=0;i<first;i++)cells+=`<div class="cell dim"></div>`;
@@ -502,6 +594,9 @@ function openDayModal(iso){
     <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-weight:600"><input type="checkbox" id="evAllDay" ${editing&&editing.allDay?'checked':''} onchange="document.getElementById('evTimes').style.display=this.checked?'none':'flex'"> ทั้งวัน (All day)</label>
     <div class="row" id="evTimes" style="display:${editing&&editing.allDay?'none':'flex'}"><div style="flex:1"><label>เวลาเริ่ม</label><input class="field" id="evStart" type="time" value="${editing&&editing.start?esc(editing.start):''}"></div>
     <div style="flex:1"><label>เวลาจบ</label><input class="field" id="evEnd" type="time" value="${editing&&editing.end?esc(editing.end):''}"></div></div>
+    ${editing?'':`<div class="row" style="margin-top:10px"><div style="flex:1"><label>ทำซ้ำ</label><select class="field" id="evRepeat" onchange="document.getElementById('evUntilWrap').style.display=this.value==='none'?'none':'block'">
+      <option value="none">ไม่ซ้ำ</option><option value="daily">ทุกวัน</option><option value="weekly">ทุกสัปดาห์</option><option value="monthly">ทุกเดือน</option></select></div>
+    <div style="flex:1;display:none" id="evUntilWrap"><label>ซ้ำจนถึงวันที่</label><input class="field" id="evUntil" type="date"></div></div>`}
     <div class="modal-actions">
       <button class="btn ghost" onclick="editingEventId=null;closeModal()">ปิด</button>
       <button class="btn" onclick="saveEvent('${iso}')">${editing?'บันทึกการแก้ไข':'เพิ่มนัด'}</button></div>
@@ -516,8 +611,34 @@ function saveEvent(iso){
   const pid=$('#evProj').value;const color=proj(pid)?proj(pid).color:PAL.sky;
   const d=D();
   if(editingEventId){const ev=d.events.find(x=>String(x.id)===String(editingEventId));if(ev){ev.title=t;ev.date=dateVal;ev.color=color;ev.allDay=allDay;ev.start=start;ev.end=end;}editingEventId=null;}
-  else{d.events.push({id:Date.now(),date:dateVal,title:t,color:color,allDay:allDay,start:start,end:end});}
+  else{
+    const repeat=($('#evRepeat')&&$('#evRepeat').value)||'none';
+    if(repeat!=='none'){
+      const until=($('#evUntil')&&$('#evUntil').value)||'';
+      const dates=genRecur(dateVal,until,repeat);
+      const base=Date.now();
+      dates.forEach((ds,i)=>d.events.push({id:base+i,date:ds,title:t,color:color,allDay:allDay,start:start,end:end}));
+    }else{
+      d.events.push({id:Date.now(),date:dateVal,title:t,color:color,allDay:allDay,start:start,end:end});
+    }
+  }
   render();openDayModal(dateVal);
+}
+function parseISO(s){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||''));return m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])):null;}
+function genRecur(startISO,untilISO,freq){
+  const out=[];const s=parseISO(startISO);if(!s)return [startISO];
+  let end=parseISO(untilISO);
+  if(!end){end=new Date(s);end.setMonth(end.getMonth()+3);}
+  let cur=new Date(s),guard=0;
+  while(cur<=end&&guard<400){
+    out.push(isoOf(cur.getFullYear(),cur.getMonth(),cur.getDate()));
+    if(freq==='daily')cur.setDate(cur.getDate()+1);
+    else if(freq==='weekly')cur.setDate(cur.getDate()+7);
+    else if(freq==='monthly')cur.setMonth(cur.getMonth()+1);
+    else break;
+    guard++;
+  }
+  return out.length?out:[startISO];
 }
 function editEvent(id,iso){editingEventId=id;openDayModal(iso);}
 function deleteEvent(id,iso){if(!confirm('ลบนัดนี้?'))return;const d=D();d.events=d.events.filter(e=>String(e.id)!==String(id));editingEventId=null;render();openDayModal(iso);}
@@ -532,7 +653,9 @@ function viewTimeline(){
       return `<div class="case" onclick="openCase('${c.id}')">
         <div class="case-top"><div class="cemoji" style="background:${tint(c.color)}">${c.emoji}</div>
           <div style="flex:1"><div class="cname">${esc(c.name)}</div><div class="cmeta">${c.entries.length} เหตุการณ์${last?' · ล่าสุด '+esc(entryDate(last)):''}</div></div>
-          <span class="status ${c.status}">${statusLabel[c.status]}</span></div>
+          <span class="status ${c.status}">${statusLabel[c.status]}</span>
+          <button class="del" style="width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:14px;flex:none" onclick="event.stopPropagation();editCase('${c.id}')" title="แก้ไขหัวข้อ">✏️</button>
+          <button class="del" style="width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:14px;flex:none" onclick="event.stopPropagation();deleteCase('${c.id}')" title="ลบเคส">✕</button></div>
         ${first&&last?`<div class="case-foot">🕑 ${esc(entryDate(first))} → ${esc(entryDate(last))} · แตะเพื่อดูไทม์ไลน์ทั้งหมด →</div>`:'<div class="case-foot">แตะเพื่อดูไทม์ไลน์ →</div>'}
       </div>`;
     }).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">ยังไม่มีเคส — กด “＋ เปิดเคสใหม่”</div>');
@@ -586,6 +709,28 @@ function openCaseModal(){
 }
 function saveCase(){const n=$('#csName').value.trim();if(!n)return;const first=$('#csFirst').value.trim();
   D().cases.unshift({id:'c'+Date.now(),emoji:'📌',color:PAL.lav,name:n,status:'open',entries:[{date:todayISO(),time:'',what:first||'เปิดเคส',ev:''}]});closeModal();render();}
+function editCase(id){
+  const c=D().cases.find(x=>x.id===id);if(!c)return;
+  const stOpt=(v,l)=>`<option value="${v}" ${c.status===v?'selected':''}>${l}</option>`;
+  $('#modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <h3>✏️ แก้ไขหัวข้อเคส</h3>
+    <label>ชื่อเรื่อง / ปัญหา</label><input class="field" id="ecName" value="${esc(c.name)}">
+    <label style="margin-top:10px">สถานะ</label><select class="field" id="ecStatus">${stOpt('open','ยังไม่จบ')}${stOpt('prog','กำลังแก้')}${stOpt('closed','ปิดเคสแล้ว')}</select>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveCaseEdit('${id}')">บันทึก</button></div>
+  </div></div>`;
+}
+function saveCaseEdit(id){
+  const c=D().cases.find(x=>x.id===id);if(!c)return;
+  const n=$('#ecName').value.trim();if(!n){$('#ecName').focus();return;}
+  c.name=n;if($('#ecStatus'))c.status=$('#ecStatus').value;
+  closeModal();render();
+}
+function deleteCase(id){
+  if(!confirm('ลบเคสนี้ทั้งหมด? เหตุการณ์ทั้งหมดจะถูกลบและยกเลิกไม่ได้'))return;
+  const d=D();d.cases=d.cases.filter(c=>c.id!==id);
+  if(caseOpen===id)caseOpen=null;
+  render();
+}
 
 /* ---- Share ---- */
 function viewShare(){
@@ -638,7 +783,7 @@ function expenseRow(e){
   const payer=e.payer?avatar(e.payer):'';
   return `<div class="exp"><div style="flex:1;min-width:0">
       <div class="et">${esc(e.title)}</div>
-      <div class="em">${p?ptag(e.project):''}<span>📅 ${esc(e.date)}</span>${e.payer?'<span>จ่ายโดย '+esc(mem(e.payer).name)+'</span>':''}</div>
+      <div class="em">${p?ptag(e.project):''}<span>📅 ${esc(isISO(e.date)?isoToThai(e.date):e.date)}</span>${e.payer?'<span>จ่ายโดย '+esc(mem(e.payer).name)+'</span>':''}</div>
     </div>${payer}<div class="ea">฿${baht(e.amount)}</div>
     <button class="del" onclick="deleteExpense(${e.id})" title="ลบ">✕</button></div>`;
 }
@@ -651,7 +796,7 @@ function openExpenseModal(){
     <h3>＋ บันทึกค่าใช้จ่าย</h3>
     <label>รายการ</label><input class="field" id="exTitle" placeholder="เช่น ค่ากระเบื้องห้องน้ำ">
     <div class="row"><div style="flex:1"><label>จำนวนเงิน (บาท)</label><input class="field" id="exAmount" type="number" min="0" placeholder="1500"></div>
-    <div style="flex:1"><label>วันที่</label><input class="field" id="exDate" placeholder="เช่น 25 ก.ค."></div></div>
+    <div style="flex:1"><label>วันที่</label><input class="field" id="exDate" type="date" value="${todayISO()}"></div></div>
     <div class="row"><div style="flex:1"><label>โปรเจกต์</label><select class="field" id="exProj">${opts}</select></div>${payerField}</div>
     <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn" onclick="saveExpense()">บันทึก</button></div>
   </div></div>`;
@@ -659,7 +804,7 @@ function openExpenseModal(){
 function saveExpense(){
   const title=$('#exTitle').value.trim();const amt=parseFloat($('#exAmount').value);
   if(!title||!(amt>0)){$('#exTitle').focus();return;}
-  const e={id:Date.now(),title,amount:amt,date:$('#exDate').value.trim()||'วันนี้',project:$('#exProj').value};
+  const e={id:Date.now(),title,amount:amt,date:$('#exDate').value||todayISO(),project:$('#exProj').value};
   if(ws==='shared'&&$('#exPayer'))e.payer=$('#exPayer').value;
   D().expenses.push(e);closeModal();render();
 }
