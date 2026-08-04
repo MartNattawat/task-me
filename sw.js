@@ -1,4 +1,4 @@
-const CACHE = 'taskme-v10';
+const CACHE = 'taskme-v11';
 const ASSETS = [
   '/manifest.webmanifest',
   '/icon.svg',
