@@ -431,33 +431,50 @@ let taskFilter='all';
 let taskSearch='';
 function isISO(s){return /^\d{4}-\d{2}-\d{2}$/.test(String(s||''));}
 /* long-press drag to reorder tasks */
-let _dragEl=null,_dragTimer=null,_dragging=false;
+let _dragEl=null,_dragTimer=null,_dragging=false,_dragStartY=0,_dragBound=false,_dragPid=null;
+function _dragReset(){
+  clearTimeout(_dragTimer);
+  if(_dragEl){try{_dragEl.classList.remove('dragging');}catch(_){}
+    if(_dragPid!=null){try{_dragEl.releasePointerCapture(_dragPid);}catch(_){}}}
+  _dragEl=null;_dragging=false;_dragPid=null;
+}
+// ตาข่ายกันจอค้าง: ปล่อยนิ้วที่ไหนก็ตาม = จบการลากเสมอ (กันสถานะ pointer ค้างที่ทำให้กดปุ่มอื่นไม่ติด)
+function _dragEndGlobal(){
+  const commit=_dragging&&_dragEl&&_dragEl.isConnected;
+  _dragReset();
+  if(commit)commitTaskOrder();
+}
 function enableTaskDrag(){
+  _dragReset();                       // เคลียร์สถานะค้างจากหน้าก่อนทุกครั้งที่ render
+  if(!_dragBound){                    // ผูก listener ระดับ document ครั้งเดียว
+    document.addEventListener('pointerup',_dragEndGlobal,true);
+    document.addEventListener('pointercancel',_dragEndGlobal,true);
+    _dragBound=true;
+  }
   const cont=document.getElementById('taskList');
   if(!cont)return;
   cont.querySelectorAll('.task').forEach(el=>{
     const handle=el.querySelector('.drag-handle')||el;
-    const start=e=>{
+    handle.addEventListener('pointerdown',e=>{
       if(e.target.closest('button,a')&&!e.target.closest('.drag-handle'))return;
+      _dragStartY=e.clientY;_dragPid=e.pointerId;
+      clearTimeout(_dragTimer);
       _dragTimer=setTimeout(()=>{
         _dragging=true;_dragEl=el;el.classList.add('dragging');
         try{el.setPointerCapture(e.pointerId);}catch(_){}
       },300);
-    };
-    handle.addEventListener('pointerdown',start);
+    });
     el.addEventListener('pointermove',e=>{
-      if(!_dragging||!_dragEl)return;
+      if(!_dragging){                  // ยังไม่เข้าโหมดลาก: ถ้านิ้วขยับ = ตั้งใจเลื่อนจอ → ยกเลิกจับเวลา
+        if(Math.abs(e.clientY-_dragStartY)>8)clearTimeout(_dragTimer);
+        return;
+      }
+      if(!_dragEl||!_dragEl.isConnected){_dragReset();return;}
       e.preventDefault();
       const after=_dragAfter(cont,e.clientY);
       if(after==null)cont.appendChild(_dragEl);
       else if(after!==_dragEl)cont.insertBefore(_dragEl,after);
     });
-    const end=()=>{
-      clearTimeout(_dragTimer);
-      if(_dragging){_dragging=false;if(_dragEl)_dragEl.classList.remove('dragging');_dragEl=null;commitTaskOrder();}
-    };
-    el.addEventListener('pointerup',end);
-    el.addEventListener('pointercancel',end);
   });
 }
 function _dragAfter(cont,y){
@@ -472,10 +489,15 @@ function _dragAfter(cont,y){
 }
 function commitTaskOrder(){
   const cont=document.getElementById('taskList');if(!cont)return;
-  const ids=[...cont.querySelectorAll('.task')].map(el=>Number(el.dataset.id));
-  if(!ids.length)return;
-  const d=D();const vis=new Set(ids);let vi=0;
-  d.tasks=d.tasks.map(t=>vis.has(t.id)?d.tasks.find(x=>x.id===ids[vi++]):t);
+  const d=D();const byId=new Map(d.tasks.map(t=>[t.id,t]));
+  // ลำดับใหม่จากหน้าจอ เฉพาะ id ที่มีจริง (กัน undefined เข้าไปทำ list พัง)
+  const order=[...cont.querySelectorAll('.task')].map(el=>Number(el.dataset.id)).filter(id=>byId.has(id));
+  if(!order.length)return;
+  const vis=new Set(order);let vi=0;
+  const next=d.tasks.map(t=>vis.has(t.id)?byId.get(order[vi++]):t);
+  // กันพลาด: ถ้าจำนวนหรือความครบถ้วนไม่ตรง ให้คงลำดับเดิม
+  if(next.length!==d.tasks.length||next.some(t=>!t))return void render();
+  d.tasks=next;
   render();
 }
 function dueText(t){return isISO(t.due)?isoToThai(t.due)+(t.time?' '+esc(t.time):''):esc(t.due||'ไม่ระบุ');}
@@ -1100,7 +1122,11 @@ loadCache();
 lastPushed.personal = JSON.stringify(DATA.personal);
 lastPushed.shared   = JSON.stringify(DATA.shared);
 const _render=render;
-render=function(){_render();saveState();};
+render=function(){
+  try{ _render(); }
+  catch(err){ console.error('render error:',err); }   // กันไม่ให้ error หน้าจอทำให้แอปค้างถาวร (ยังสลับหน้าต่อได้)
+  saveState();
+};
 
 render();          // แสดงข้อมูลแคช/ตัวอย่างไว้เบื้องหลัง overlay
 // โหลดเร็ว: ถ้ามีแคช + เคยล็อกอินไว้แล้ว ให้แสดงข้อมูลทันทีไม่ต้องรอ backend (~5วิ)
