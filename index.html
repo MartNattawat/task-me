@@ -537,6 +537,7 @@ function viewTasks(){
   else{
     list=active.slice();
     if(taskFilter==='today')list=list.filter(t=>t.due===todayISO()||t.due==='วันนี้');
+    else if(taskFilter==='month')list=list.filter(t=>isISO(t.due)&&t.due.slice(0,7)===todayISO().slice(0,7));
     else if(taskFilter!=='all')list=list.filter(t=>t.project===taskFilter);
   }
   const q=(taskSearch||'').trim().toLowerCase();
@@ -550,7 +551,7 @@ function viewTasks(){
         <div class="ministat"><span class="mk">เสร็จแล้ว</span><span class="mv" style="color:#2F9E44">${doneCount}</span></div>
       </div>`
     +`<input class="tsearch" id="taskSearch" placeholder="🔍 ค้นหาชื่องาน…" value="${esc(taskSearch||'')}" oninput="onTaskSearch(this.value)">`
-    +`<div class="chips">${chip('all','ทั้งหมด')}${chip('today','วันนี้')}${d.projects.map(p=>chip(p.id,p.emoji+' '+p.name)).join('')}${chip('done','✓ เสร็จแล้ว ('+doneCount+')')}</div>`
+    +`<div class="chips">${chip('all','ทั้งหมด')}${chip('today','วันนี้')}${chip('month','เดือนนี้')}${d.projects.map(p=>chip(p.id,p.emoji+' '+p.name)).join('')}${chip('done','✓ เสร็จแล้ว ('+doneCount+')')}</div>`
     +`<div class="panel" id="taskList">${list.length?renderTaskGroups(list):'<div style="color:var(--muted);text-align:center;padding:24px">'+empty+'</div>'}</div>`;
 }
 function setFilter(v){taskFilter=v;render();}
@@ -562,6 +563,7 @@ function onTaskSearch(v){
   let list=taskFilter==='done'?doneList.slice():active.slice();
   if(taskFilter!=='done'){
     if(taskFilter==='today')list=list.filter(t=>t.due===todayISO()||t.due==='วันนี้');
+    else if(taskFilter==='month')list=list.filter(t=>isISO(t.due)&&t.due.slice(0,7)===todayISO().slice(0,7));
     else if(taskFilter!=='all')list=list.filter(t=>t.project===taskFilter);
   }
   const q=v.trim().toLowerCase();
