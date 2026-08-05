@@ -135,9 +135,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* task search + drag */
 .tsearch{width:100%;margin-bottom:14px;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;background:var(--panel);color:var(--ink);outline:none;}
 .tsearch:focus{border-color:var(--clay);box-shadow:0 0 0 3px var(--clay-soft);}
-.task{touch-action:pan-y;}
-.task.dragging{opacity:.55;background:var(--bg2);border-radius:12px;box-shadow:var(--shadow);}
-.drag-handle{flex:none;color:#C9C2B4;font-size:16px;cursor:grab;padding:0 2px;touch-action:none;user-select:none;}
+.task-sep{display:flex;align-items:center;gap:10px;margin:18px 2px 8px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.02em;}
+.task-sep::before,.task-sep::after{content:"";flex:1;height:1px;background:var(--line);}
 
 /* kanban */
 .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
@@ -419,7 +418,7 @@ function render(){
   const m=$('#main');
   if(tab==='share'){m.innerHTML=viewShare();return;}
   if(tab==='settings'){m.innerHTML=viewSettings();return;}
-  if(tab==='task'){m.innerHTML=viewTasks();enableTaskDrag();}
+  if(tab==='task'){m.innerHTML=viewTasks();}
   else if(tab==='calendar') m.innerHTML=viewCalendar();
   else if(tab==='timeline') m.innerHTML= caseOpen? viewCaseDetail(caseOpen): viewTimeline();
   else if(tab==='expenses') m.innerHTML=viewExpenses();
@@ -505,7 +504,6 @@ function taskRow(t){
   const done=t.status==='done';
   const gc=isISO(t.due)?`<a class="gcal-link" href="${gcalUrl(t.title,t.due,t.time)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="เพิ่มลงปฏิทิน Google">📅 Google</a>`:'';
   return `<div class="task ${done?'done':''}" data-id="${t.id}">
-    <span class="drag-handle" title="กดค้างเพื่อลากจัดลำดับ">⋮⋮</span>
     <button class="check" onclick="toggleTask(${t.id})">${done?'✓':''}</button>
     <div class="t-body"><div class="t-title">${esc(t.title)} ${t.email?'<span class="mail-badge">📧 จากอีเมล</span>':''}</div>
       <div class="t-meta">${ptag(t.project)}<span class="pri ${t.pri}">${priLabel[t.pri]}</span><span class="due">📅 ${dueText(t)}</span>${gc}</div></div>
@@ -517,6 +515,16 @@ function taskRow(t){
 }
 function editTask(id){openTaskModal(id);}
 function deleteTask(id){if(!confirm('ลบงานนี้? การลบยกเลิกไม่ได้'))return;const d=D();d.tasks=d.tasks.filter(t=>t.id!==id);render();}
+// เรียงงาน: ที่ลงวันแล้วเรียงตามวันที่ (ใกล้ถึงกำหนดอยู่บน) → เว้นเส้นคั่น → งานที่ยังไม่ลงวันอยู่ล่าง
+function taskDueKey(t){return isISO(t.due)?(t.due+'T'+(t.time||'99:99')):null;}
+function renderTaskGroups(list){
+  const dated=list.filter(t=>isISO(t.due)).sort((a,b)=>taskDueKey(a)<taskDueKey(b)?-1:taskDueKey(a)>taskDueKey(b)?1:0);
+  const undated=list.filter(t=>!isISO(t.due));
+  let html=dated.map(taskRow).join('');
+  if(dated.length&&undated.length)html+='<div class="task-sep">ยังไม่ลงวันที่</div>';
+  html+=undated.map(taskRow).join('');
+  return html;
+}
 function viewTasks(){
   const d=D();
   const active=d.tasks.filter(t=>t.status!=='done');
@@ -543,7 +551,7 @@ function viewTasks(){
       </div>`
     +`<input class="tsearch" id="taskSearch" placeholder="🔍 ค้นหาชื่องาน…" value="${esc(taskSearch||'')}" oninput="onTaskSearch(this.value)">`
     +`<div class="chips">${chip('all','ทั้งหมด')}${chip('today','วันนี้')}${d.projects.map(p=>chip(p.id,p.emoji+' '+p.name)).join('')}${chip('done','✓ เสร็จแล้ว ('+doneCount+')')}</div>`
-    +`<div class="panel" id="taskList">${list.length?list.map(taskRow).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">'+empty+'</div>'}</div>`;
+    +`<div class="panel" id="taskList">${list.length?renderTaskGroups(list):'<div style="color:var(--muted);text-align:center;padding:24px">'+empty+'</div>'}</div>`;
 }
 function setFilter(v){taskFilter=v;render();}
 function onTaskSearch(v){
@@ -560,8 +568,7 @@ function onTaskSearch(v){
   if(q)list=list.filter(t=>String(t.title||'').toLowerCase().includes(q));
   const cont=document.getElementById('taskList');
   if(cont){
-    cont.innerHTML=list.length?list.map(taskRow).join(''):'<div style="color:var(--muted);text-align:center;padding:24px">'+(q?'ไม่พบงานที่ค้นหา 🔍':'ไม่มีงาน')+'</div>';
-    enableTaskDrag();
+    cont.innerHTML=list.length?renderTaskGroups(list):'<div style="color:var(--muted);text-align:center;padding:24px">'+(q?'ไม่พบงานที่ค้นหา 🔍':'ไม่มีงาน')+'</div>';
   }
 }
 function toggleTask(id){const t=D().tasks.find(x=>x.id===id);t.status=t.status==='done'?'todo':'done';render();}
