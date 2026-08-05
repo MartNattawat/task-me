@@ -641,6 +641,7 @@ function openDayModal(iso){
     ${editing?'':`<div class="row" style="margin-top:10px"><div style="flex:1"><label>ทำซ้ำ</label><select class="field" id="evRepeat" onchange="document.getElementById('evUntilWrap').style.display=this.value==='none'?'none':'block'">
       <option value="none">ไม่ซ้ำ</option><option value="daily">ทุกวัน</option><option value="weekly">ทุกสัปดาห์</option><option value="monthly">ทุกเดือน</option></select></div>
     <div style="flex:1;display:none" id="evUntilWrap"><label>ซ้ำจนถึงวันที่</label><input class="field" id="evUntil" type="date"></div></div>`}
+    ${(!editing&&ws==='personal')?`<label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-weight:600"><input type="checkbox" id="evShare"> 👨‍👩‍👧 แชร์ไปปฏิทินแชร์ด้วย</label>`:''}
     </div>
     <div class="modal-actions">
       <button class="btn ghost" onclick="editingEventId=null;closeModal()">ปิด</button>
@@ -668,13 +669,19 @@ function saveEvent(iso){
   if(editingEventId){const ev=d.events.find(x=>String(x.id)===String(editingEventId));if(ev){ev.title=t;ev.date=dateVal;ev.color=color;ev.allDay=allDay;ev.start=start;ev.end=end;}editingEventId=null;}
   else{
     const repeat=($('#evRepeat')&&$('#evRepeat').value)||'none';
+    const base=Date.now();
+    let newEvs;
     if(repeat!=='none'){
       const until=($('#evUntil')&&$('#evUntil').value)||'';
       const dates=genRecur(dateVal,until,repeat);
-      const base=Date.now();
-      dates.forEach((ds,i)=>d.events.push({id:base+i,date:ds,title:t,color:color,allDay:allDay,start:start,end:end}));
+      newEvs=dates.map((ds,i)=>({id:base+i,date:ds,title:t,color:color,allDay:allDay,start:start,end:end}));
     }else{
-      d.events.push({id:Date.now(),date:dateVal,title:t,color:color,allDay:allDay,start:start,end:end});
+      newEvs=[{id:base,date:dateVal,title:t,color:color,allDay:allDay,start:start,end:end}];
+    }
+    newEvs.forEach(ev=>d.events.push(ev));
+    const share=($('#evShare')&&$('#evShare').checked);
+    if(share&&ws==='personal'&&DATA.shared){
+      newEvs.forEach((ev,i)=>DATA.shared.events.push(Object.assign({},ev,{id:base+1000+i})));
     }
   }
   render();openDayModal(dateVal);
